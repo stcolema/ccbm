@@ -1,0 +1,21 @@
+Package: ccbm
+Type: Package
+Title: Consensus clustering of Bayesian mixture models
+Version: 1.0
+Date: 2020-09-07
+Author: c(person("Stephen", "Coleman", role=c("aut","cre"),
+    email = "stephen.coleman@mrc-bsu.cam.ac.uk")
+Maintainer: Stephen Coleman <stephen.coleman@mrc-bsu.cam.ac.uk>
+Description: This package is for Bayesian mixture models. There is a wrapper 
+  function using the ``doFuture`` package that calls consensus clustering of these
+  models in parallel.
+License: GPL
+Imports: Rcpp (>= 1.0.5), RcppArmadillo, RcppParallel, doFuture
+Suggests: mcclust
+LinkingTo: Rcpp, RcppArmadillo, RcppThread, RcppParallel
+biocViews:
+SystemRequirements: GNU make
+Encoding: UTF-8
+URL: https://github.com/stcolema/ccbm
+BugReports: https://github.com/stcolema/ccbm/issues
+RoxygenNote: 7.1.1
