@@ -301,8 +301,6 @@ public:
           
           // Parameters of the distribution for tau
           a = alpha + 0.5 * n_k;
-          // std::cout << "\na: " << a << "\n";
-          // std::cout << "b_star\n";
           
           arma::vec b_star = component_data.col(p) - mu(p, k);
           b = beta(p) + 0.5 * arma::accu(b_star % b_star);
@@ -505,51 +503,76 @@ public:
 };
 
 
-// class categoricalSampler: public sampler {
-//   
-// public:
-//   
-//   double phi;
-//   arma::mat prob;
-//   
-//   using sampler::sampler;
-//   
-//   categoricalSampler(
-//     arma::uword _K,
-//     arma::uvec _labels, 
-//     arma::vec _concentration,
-//     arma::mat _X
-//   ) : sampler(_K, _labels, _concentration, _X) {
-//     phi = arma::accu(_X);
-//     
-//     // Probability for each class
-//     prob.set_size(P, _K);
-//     prob.zeros();
-//   }
-//   
-//   sampleParameters(){
-//     
-//     double component_column_prop;
-//     
-//     for(arma::uword k = 0; k < K; k++){
-//       
-//       // Find how many labels have the value
-//       n_k = N_k(k);
-//       if(n_k > 0){
-//         
-//         arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
-//       
-//         for(arma::uword p = 0; p < P; p++){
-//           
-//           component_column_prop = arma::accu(component_data.col(p));
-//           
-//           prob(p, k) = rBeta()
-//         }
-//       }
-//     }
-//   }
-//   
-// };
+class categoricalSampler: public sampler {
+
+public:
+
+  double phi;
+  arma::mat prob;
+
+  using sampler::sampler;
+
+  categoricalSampler(
+    arma::uword _K,
+    arma::uvec _labels,
+    arma::vec _concentration,
+    arma::mat _X
+  ) : sampler(_K, _labels, _concentration, _X) {
+    phi = arma::accu(_X);
+
+    // Probability for each class
+    prob.set_size(P, _K);
+    prob.zeros();
+  }
+
+  void sampleFromPriors(){
+    for(arma::uword k = 0; k < K; k++){
+      prob.col(k) = rBeta(P, 1 - phi, phi);
+    }
+  }
+  
+  void sampleParameters(){
+
+    arma::uword n_k = 0;
+    arma::rowvec component_column_prop;
+
+    for(arma::uword k = 0; k < K; k++){
+
+      // Find how many labels have the value
+      n_k = N_k(k);
+      if(n_k > 0){
+
+        arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
+        component_column_prop = arma::sum(component_data);
+
+        for(arma::uword p = 0; p < P; p++){
+
+          prob(p, k) = rBeta((1 - component_column_prop(p)) + (1 - phi), component_column_prop(p) + phi);
+        }
+      } else {
+        prob.col(k) = rBeta(P, 1 - phi, phi);
+      }
+    }
+  }
+  
+  
+  arma::vec logLikelihood(arma::vec point) {
+    
+    arma::vec ll = arma::zeros<arma::vec>(K);
+    arma::vec class_prob(P);
+    
+    for(arma::uword k = 0; k < K; k++) {
+      
+      class_prob = prob.col(k);
+      
+      for(arma::uword p = 0; p < P; p++) {
+        ll(k) += std::log( (class_prob(p) * point(p) ) + (1 - class_prob(p)) * (1 - point(p)) );
+      }
+    }
+  return(ll); 
+  }
+
+};
 
 //' @title Mixture model
 //' @description Performs MCMC sampling for a mixture model.
@@ -579,13 +602,15 @@ arma::umat mixtureModel (
   // mvnSampler my_sampler(K, labels, concentration, X);
   // }
   
+  // categoricalSampler my_sampler(K, labels, concentration, X);
+  
   // The output matrix
   arma::umat class_record(floor(R / thin), X.n_rows);
   class_record.zeros();
   
   arma::uword save_int=0;
   
-  // Sampler from priors
+  // Sampler from priors (this is unnecessary)
   my_sampler.sampleFromPriors();
   
   // Iterate over MCMC moves
