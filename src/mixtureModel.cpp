@@ -779,7 +779,8 @@ public:
 //' @param R The number of iterations to run for.
 //' @param thin thinning factor for samples recorded.
 //' @param concentration Vector of concentrations for mixture weights (recommended to be symmetric).
-//' @return Matrix of MCMC samples.
+//' @return Named list of the matrix of MCMC samples generated (each row 
+//' corresponds to a different sample) and BIC for each saved iteration.
 // [[Rcpp::export]]
 Rcpp::List mixtureModel (
     arma::mat X,
@@ -799,7 +800,7 @@ Rcpp::List mixtureModel (
   
   // Declare the sampler to be used
   // if(dataType.compare("G") == 0){
-    gaussianSampler _my_sampler(K, labels, concentration, X);
+  //   gaussianSampler _my_sampler(K, labels, concentration, X);
   // }
 
   // if(dataType.compare("MVN") == 0){

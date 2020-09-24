@@ -22,7 +22,8 @@ mixtureModel(X, K, labels, dataType, R, thin, concentration, seed)
 \item{concentration}{Vector of concentrations for mixture weights (recommended to be symmetric).}
 }
 \value{
-Matrix of MCMC samples.
+Named list of the matrix of MCMC samples generated (each row 
+corresponds to a different sample) and BIC for each saved iteration.
 }
 \description{
 Performs MCMC sampling for a mixture model.
