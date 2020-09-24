@@ -55,7 +55,8 @@ NULL
 #' @param R The number of iterations to run for.
 #' @param thin thinning factor for samples recorded.
 #' @param concentration Vector of concentrations for mixture weights (recommended to be symmetric).
-#' @return Matrix of MCMC samples.
+#' @return Named list of the matrix of MCMC samples generated (each row 
+#' corresponds to a different sample) and BIC for each saved iteration.
 mixtureModel <- function(X, K, labels, dataType, R, thin, concentration, seed) {
     .Call(`_ccbm_mixtureModel`, X, K, labels, dataType, R, thin, concentration, seed)
 }
