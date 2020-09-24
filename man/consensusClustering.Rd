@@ -34,17 +34,17 @@ matrix of samples generated from each learner (each row corresponds to a differe
 Consensus clustering of Gaussian mixture models.
 }
 \examples{
-  # Convert data to matrix format
-  X <- as.matrix(my_data)
-  
-  # Ensemble parameters
-  S <- 100
-  R <- 100
-  
-  # Samples from each model
-  samples <- consensusClustering(X, S, R)
-  
-  # Predicted clustering and consensus matrix
-  pred_cl <- mcclust::maxpear(samples)
-  cm <- createSimilarityMatrix(pred_cl)
+# Convert data to matrix format
+X <- as.matrix(my_data)
+
+# Ensemble parameters
+S <- 100
+R <- 100
+
+# Samples from each model
+samples <- consensusClustering(X, S, R)
+
+# Predicted clustering and consensus matrix
+pred_cl <- mcclust::maxpear(samples)
+cm <- createSimilarityMatrix(pred_cl)
 }

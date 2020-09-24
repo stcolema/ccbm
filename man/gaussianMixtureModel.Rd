@@ -11,7 +11,8 @@ gaussianMixtureModel(
   initial_labels = NULL,
   K_max = 50,
   alpha = 1,
-  dataType = "G"
+  dataType = "G",
+  seed = sample.int(.Machine$integer.max, 1)
 )
 }
 \arguments{
@@ -35,17 +36,17 @@ A Bayesian mixture model using independent Gaussians. The priors
 are empirical and follow the suggestions of Richardson and Green <https://doi.org/10.1111/1467-9868.00095>.
 }
 \examples{
-  # Convert data to matrix format
-  X <- as.matrix(my_data)
-  
-  # Sampling parameters
-  R <- 1000
-  thin <- 50
-  
-  # MCMC samples
-  samples <- gaussianMixtureModel(X, R, thin)
-  
-  # Predicted clustering and PSM
-  pred_cl <- mcclust::maxpear(samples)
-  psm <- createSimilarityMatrix(pred_cl)
+# Convert data to matrix format
+X <- as.matrix(my_data)
+
+# Sampling parameters
+R <- 1000
+thin <- 50
+
+# MCMC samples
+samples <- gaussianMixtureModel(X, R, thin)
+
+# Predicted clustering and PSM
+pred_cl <- mcclust::maxpear(samples)
+psm <- createSimilarityMatrix(pred_cl)
 }

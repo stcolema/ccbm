@@ -20,5 +20,5 @@ A vector of labels.
 Generate labels from the stick-breaking prior.
 }
 \examples{
- initial_labels <- priorLabels(1, 50, 100)
+initial_labels <- priorLabels(1, 50, 100)
 }

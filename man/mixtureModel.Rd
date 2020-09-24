@@ -4,7 +4,7 @@
 \alias{mixtureModel}
 \title{Mixture model}
 \usage{
-mixtureModel(X, K, labels, dataType, R, thin, concentration)
+mixtureModel(X, K, labels, dataType, R, thin, concentration, seed)
 }
 \arguments{
 \item{X}{The data matrix to perform clustering upon (items to cluster in rows).}

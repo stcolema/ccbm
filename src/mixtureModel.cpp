@@ -74,9 +74,10 @@ private:
   double logLikelihood(arma::vec x) { return 0.0; }
   
 public:
-  arma::uword K, N, P;
+  arma::uword K, N, P, K_occ;
+  double model_likelihood = 0.0, BIC = 0.0;
   arma::uvec labels, N_k;
-  arma::vec concentration, w;
+  arma::vec concentration, w, ll, likelihood;
   arma::umat members;
   arma::mat X, alloc;
   
@@ -105,11 +106,16 @@ public:
     // Weights
     // double x, y;
     w = arma::zeros<arma::vec>(_K);
+    
     // for(arma::uword k = 0; k < K; k++){
     //   x = arma::randg(1, concentration(k));
     //   y = arma::randg(1, concentration(k));
     //   w(k) = (1 - sum(w)) * x/(x + y);
     // }
+    
+    // Log likelihood (individual and model)
+    ll = arma::zeros<arma::vec>(_K);
+    likelihood = arma::zeros<arma::vec>(N);
     
     // Class members
     members.set_size(N, _K);
@@ -142,30 +148,58 @@ public:
   };
   
   void updateAllocation() {
-    
+
     double u = 0.0;
-    arma::vec ll(K);
-    
+    arma::uvec uniqueK;
+    arma::vec comp_prob(K);
+
     for(arma::uword n = 0; n < N; n++){
-      
+
       ll = logLikelihood(X.row(n).t());
-      
+
       // Update with weights
-      ll = ll + log(w);
-      
+      comp_prob = ll + log(w);
+
       // Normalise and overflow
-      ll = exp(ll - max(ll));
-      ll = ll / sum(ll);
-      
+      comp_prob = exp(comp_prob - max(comp_prob));
+      comp_prob = comp_prob / sum(comp_prob);
+
       // Prediction and update
       u = arma::randu<double>( );
-      labels(n) = sum(u > cumsum(ll));
-      alloc.row(n) = ll.t();
+      labels(n) = sum(u > cumsum(comp_prob));
+      alloc.row(n) = comp_prob.t();
+
+      // Record the likelihood of the item in it's allocated component
+      likelihood(n) = ll(labels(n));
     }
+
+    // The model log likelihood
+    model_likelihood = arma::accu(likelihood);
+
+    // Number of occupied components (used in BIC calculation)
+    uniqueK = arma::unique(labels);
+    K_occ = uniqueK.n_elem;
   };
   
+  // void predictLabel(arma::uword n, arma::vec ll) {
+  //   
+  //   arma::uword u = 0;
+  //   arma::vec comp_prob = ll + log(w);
+  //     
+  //   // Normalise and overflow
+  //   comp_prob = exp(comp_prob - max(comp_prob));
+  //   comp_prob = comp_prob / sum(comp_prob);
+  //   
+  //   // Prediction and update
+  //   u = arma::randu<double>( );
+  //   labels(n) = sum(u > cumsum(comp_prob));
+  //   alloc.row(n) = comp_prob.t();
+  //   
+  // };
+    
   void sampleFromPriors() {};
   void sampleParameters(){};
+  void calcBIC(){};
   
 };
 
@@ -336,28 +370,99 @@ public:
     return ll;
   };
   
+  void calcBIC(){
+    
+    arma::uword n_param = (P + P) * K_occ;
+    BIC = n_param * std::log(N) - 2 * model_likelihood;
+    
+  }
+  
   void updateAllocation() {
     
     double u = 0.0;
-    arma::vec ll(K);
+    arma::uvec uniqueK;
+    arma::vec comp_prob(K);
     
     for(arma::uword n = 0; n < N; n++){
       
       ll = logLikelihood(X.row(n).t());
       
       // Update with weights
-      ll = ll + log(w);
+      comp_prob = ll + log(w);
       
       // Normalise and overflow
-      ll = exp(ll - max(ll));
-      ll = ll / sum(ll);
+      comp_prob = exp(comp_prob - max(comp_prob));
+      comp_prob = comp_prob / sum(comp_prob);
       
       // Prediction and update
       u = arma::randu<double>( );
-      labels(n) = sum(u > cumsum(ll));
-      // alloc.row(n) = ll.t();
+      labels(n) = sum(u > cumsum(comp_prob));
+      alloc.row(n) = comp_prob.t();
+      
+      // Record the likelihood of the item in it's allocated component
+      likelihood(n) = ll(labels(n));
     }
+    
+    // The model log likelihood
+    model_likelihood = arma::accu(likelihood);
+    
+    // Number of occupied components (used in BIC calculation)
+    uniqueK = arma::unique(labels);
+    K_occ = uniqueK.n_elem;
   };
+  
+  // void updateAllocation() {
+  //   
+  //   // double u = 0.0;
+  //   arma::uvec uniqueK;
+  //   arma::vec comp_prob(K);
+  //   
+  //   for(arma::uword n = 0; n < N; n++){
+  //     
+  //     ll = logLikelihood(X.row(n).t());
+  //     
+  //     // Predict the new label for the current item
+  //     predictLabel(n, ll);
+  //     
+  //     // Record the likelihood of the item in it's allocated component
+  //     likelihood(n) = ll(labels(n));
+  //   }
+  //   
+  //   // std::cout << "Model likeihood\n";
+  //   
+  //   // The model log likelihood
+  //   model_likelihood = arma::accu(likelihood);
+  //   
+  //   // std::cout << "Unique K\n";
+  //   
+  //   // Number of occupied components (used in BIC calculation)
+  //   uniqueK = arma::unique(labels);
+  //   K_occ = uniqueK.n_elem;
+  // };
+  
+  
+  // void updateAllocation() {
+  //   
+  //   double u = 0.0;
+  //   arma::vec ll(K);
+  //   
+  //   for(arma::uword n = 0; n < N; n++){
+  //     
+  //     ll = logLikelihood(X.row(n).t());
+  //     
+  //     // Update with weights
+  //     ll = ll + log(w);
+  //     
+  //     // Normalise and overflow
+  //     ll = exp(ll - max(ll));
+  //     ll = ll / sum(ll);
+  //     
+  //     // Prediction and update
+  //     u = arma::randu<double>( );
+  //     labels(n) = sum(u > cumsum(ll));
+  //     // alloc.row(n) = ll.t();
+  //   }
+  // };
 };
 
 class mvnSampler: public sampler {
@@ -478,28 +583,77 @@ public:
     return(ll);
   }
   
+  void calcBIC(){
+    
+    arma::uword n_param = (P + P * (P + 1) * 0.5) * K_occ;
+    BIC = n_param * std::log(N) - 2 * model_likelihood;
+    
+  }
+  
   void updateAllocation() {
     
     double u = 0.0;
-    arma::vec ll(K);
+    arma::uvec uniqueK;
+    arma::vec comp_prob(K);
     
     for(arma::uword n = 0; n < N; n++){
       
       ll = logLikelihood(X.row(n).t());
       
       // Update with weights
-      ll = ll + log(w);
+      
+      std::cout << "Move yo probs\n";
+      comp_prob = ll + log(w);
       
       // Normalise and overflow
-      ll = exp(ll - max(ll));
-      ll = ll / sum(ll);
+      std::cout << "Normalise and handle overflow\n";
+      comp_prob = exp(comp_prob - max(comp_prob));
+      comp_prob = comp_prob / sum(comp_prob);
       
       // Prediction and update
+      std::cout << "Predict class\n";
       u = arma::randu<double>( );
-      labels(n) = sum(u > cumsum(ll));
-      // alloc.row(n) = ll.t();
+      labels(n) = sum(u > cumsum(comp_prob));
+      alloc.row(n) = comp_prob.t();
+      
+      // Record the likelihood of the item in it's allocated component
+      likelihood(n) = ll(labels(n));
     }
+    
+    std::cout << "Model likeihood\n";
+    
+    // The model log likelihood
+    model_likelihood = arma::accu(likelihood);
+    
+    std::cout << "Unique K\n";
+    
+    // Number of occupied components (used in BIC calculation)
+    uniqueK = arma::unique(labels);
+    K_occ = uniqueK.n_elem;
   };
+  
+  // void updateAllocation() {
+  //   
+  //   double u = 0.0;
+  //   arma::vec ll(K);
+  //   
+  //   for(arma::uword n = 0; n < N; n++){
+  //     
+  //     ll = logLikelihood(X.row(n).t());
+  //     
+  //     // Update with weights
+  //     ll = ll + log(w);
+  //     
+  //     // Normalise and overflow
+  //     ll = exp(ll - max(ll));
+  //     ll = ll / sum(ll);
+  //     
+  //     // Prediction and update
+  //     u = arma::randu<double>( );
+  //     labels(n) = sum(u > cumsum(ll));
+  //     // alloc.row(n) = ll.t();
+  //   }
+  // };
 };
 
 
@@ -572,6 +726,48 @@ public:
   return(ll); 
   }
 
+  
+  void calcBIC(){
+    
+    arma::uword n_param = P * K_occ;
+    BIC = n_param * std::log(N) - 2 * model_likelihood;
+    
+  }
+  
+  void updateAllocation() {
+    
+    double u = 0.0;
+    arma::uvec uniqueK;
+    arma::vec comp_prob(K);
+    
+    for(arma::uword n = 0; n < N; n++){
+      
+      ll = logLikelihood(X.row(n).t());
+      
+      // Update with weights
+      comp_prob = ll + log(w);
+      
+      // Normalise and overflow
+      comp_prob = exp(comp_prob - max(comp_prob));
+      comp_prob = comp_prob / sum(comp_prob);
+      
+      // Prediction and update
+      u = arma::randu<double>( );
+      labels(n) = sum(u > cumsum(comp_prob));
+      alloc.row(n) = comp_prob.t();
+      
+      // Record the likelihood of the item in it's allocated component
+      likelihood(n) = ll(labels(n));
+    }
+    
+    // The model log likelihood
+    model_likelihood = arma::accu(likelihood);
+    
+    // Number of occupied components (used in BIC calculation)
+    uniqueK = arma::unique(labels);
+    K_occ = uniqueK.n_elem;
+  };
+  
 };
 
 //' @title Mixture model
@@ -585,28 +781,45 @@ public:
 //' @param concentration Vector of concentrations for mixture weights (recommended to be symmetric).
 //' @return Matrix of MCMC samples.
 // [[Rcpp::export]]
-arma::umat mixtureModel (
+Rcpp::List mixtureModel (
     arma::mat X,
     arma::uword K,
     arma::uvec labels,
     std::string dataType,
     arma::uword R,
     arma::uword thin,
-    arma::vec concentration
+    arma::vec concentration,
+    arma::uword seed
 ) {
   
+  // Set the random number
+  std::default_random_engine generator(seed);
+  
+  // sampler _my_sampler(K, labels, concentration, X);
+  
   // Declare the sampler to be used
-  gaussianSampler my_sampler(K, labels, concentration, X);
-  
-  // if(dataType.compare("MVN") == 0){
-  // mvnSampler my_sampler(K, labels, concentration, X);
+  // if(dataType.compare("G") == 0){
+    gaussianSampler _my_sampler(K, labels, concentration, X);
   // }
+
+  // if(dataType.compare("MVN") == 0){
+  //   mvnSampler _my_sampler(K, labels, concentration, X);
+  // }
+  // 
+  // if(dataType.compare("C") == 0){
+  //   categoricalSampler _my_sampler(K, labels, concentration, X);
+  // }
+  // 
+  // auto my_sampler = _my_sampler;
   
-  // categoricalSampler my_sampler(K, labels, concentration, X);
+  gaussianSampler my_sampler(K, labels, concentration, X);
   
   // The output matrix
   arma::umat class_record(floor(R / thin), X.n_rows);
   class_record.zeros();
+  
+  // We save the BIC at each iteration
+  arma::vec BIC_record = arma::zeros<arma::vec>(floor(R / thin));
   
   arma::uword save_int=0;
   
@@ -622,9 +835,13 @@ arma::umat mixtureModel (
     
     // Record results
     if((r + 1) % thin == 0){
+      
+      my_sampler.calcBIC();
+      BIC_record( save_int ) = my_sampler.BIC;
+      
       class_record.row( save_int ) = my_sampler.labels.t();
       save_int++;
     }
   }
-  return(class_record); // List::create(Named("class_record") = record);
+  return(List::create(Named("samples") = class_record, Named("BIC") = BIC_record));
 };

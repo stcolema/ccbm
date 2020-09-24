@@ -18,5 +18,5 @@ A vector of weights.
 Draw weights from the stick-breaking prior.
 }
 \examples{
- weights <- stickBreakingPrior(1, 50)
+weights <- stickBreakingPrior(1, 50)
 }
