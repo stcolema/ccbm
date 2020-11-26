@@ -51,7 +51,7 @@ NULL
 #' @param X The data matrix to perform clustering upon (items to cluster in rows).
 #' @param K The number of components to model (upper limit on the number of clusters found).
 #' @param labels Vector item labels to initialise from.
-#' @param dataType String, "G", "MVN" or "C" for independent Gaussians, Multivariate Normal or Categorical distributions.
+#' @param dataType Int, 0: independent Gaussians, 1: Multivariate normal, or 2: Categorical distributions.
 #' @param R The number of iterations to run for.
 #' @param thin thinning factor for samples recorded.
 #' @param concentration Vector of concentrations for mixture weights (recommended to be symmetric).
