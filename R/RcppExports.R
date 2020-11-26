@@ -57,7 +57,7 @@ NULL
 #' @param concentration Vector of concentrations for mixture weights (recommended to be symmetric).
 #' @return Named list of the matrix of MCMC samples generated (each row 
 #' corresponds to a different sample) and BIC for each saved iteration.
-mixtureModel <- function(X, K, labels, dataType, R, thin, concentration, seed) {
-    .Call(`_ccbm_mixtureModel`, X, K, labels, dataType, R, thin, concentration, seed)
+sampleMixtureModel <- function(X, K, labels, dataType, R, thin, concentration, seed) {
+    .Call(`_ccbm_sampleMixtureModel`, X, K, labels, dataType, R, thin, concentration, seed)
 }
 

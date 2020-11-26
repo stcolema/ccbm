@@ -1,6 +1,7 @@
 # include <RcppArmadillo.h>
 # include <math.h> 
 # include <string>
+#include <memory>
 #include "RcppThread.h"
 // #include <iostream>
 // # include "CommonFunctions.h"
@@ -71,7 +72,8 @@ arma::mat calcSampleCov(arma::mat data,
 class sampler {
   
 private:
-  double logLikelihood(arma::vec x) { return 0.0; }
+  // virtual arma::vec logLikelihood(arma::vec x) { return 0.0; }
+  // void updateAllocation() { return; }
   
 public:
   arma::uword K, N, P, K_occ;
@@ -80,6 +82,17 @@ public:
   arma::vec concentration, w, ll, likelihood;
   arma::umat members;
   arma::mat X, alloc;
+  
+
+  // static sampler *make_sampler(int choice,
+  //                              arma::uword K,
+  //                              arma::uvec labels,
+  //                              arma::vec concentration,
+  //                              arma::mat X);
+  
+  
+  // // Unparametrised class
+  // sampler(){};
   
   // Parametrised class
   sampler(
@@ -125,6 +138,14 @@ public:
     alloc.set_size(N, _K);
     alloc.zeros();
   };
+  
+  // Destructor
+  virtual ~sampler() { };
+  
+  // Print the sampler type.
+  virtual void printType() {
+    std::cout << "\nType: NULL.\n";
+  }
   
   // Functions required of all mixture models
   void updateWeights(){
@@ -197,9 +218,10 @@ public:
   //   
   // };
     
-  void sampleFromPriors() {};
-  void sampleParameters(){};
-  void calcBIC(){};
+  virtual void sampleFromPriors() {};
+  virtual void sampleParameters(){};
+  virtual void calcBIC(){};
+  virtual arma::vec logLikelihood(arma::vec x) { return arma::vec(); }
   
 };
 
@@ -213,6 +235,10 @@ public:
   
   using sampler::sampler;
   
+  // // Unparametrised class
+  // gaussianSampler() {} ;
+  
+  // Parametrised
   gaussianSampler(
     arma::uword _K,
     arma::uvec _labels, 
@@ -273,8 +299,16 @@ public:
     
   }
   
+  // Destructor
+  virtual ~gaussianSampler() { };
+  
   
   // parallelFor(0, x.size(), [&x] (unsigned int i) {x[i] = i;});
+  
+  // Print the sampler type.
+  void printType() {
+    std::cout << "\nType: Gaussian.\n";
+  }
   
   // Parameters for the mixture model
   void sampleFromPriors() {
@@ -377,39 +411,39 @@ public:
     
   }
   
-  void updateAllocation() {
-    
-    double u = 0.0;
-    arma::uvec uniqueK;
-    arma::vec comp_prob(K);
-    
-    for(arma::uword n = 0; n < N; n++){
-      
-      ll = logLikelihood(X.row(n).t());
-      
-      // Update with weights
-      comp_prob = ll + log(w);
-      
-      // Normalise and overflow
-      comp_prob = exp(comp_prob - max(comp_prob));
-      comp_prob = comp_prob / sum(comp_prob);
-      
-      // Prediction and update
-      u = arma::randu<double>( );
-      labels(n) = sum(u > cumsum(comp_prob));
-      alloc.row(n) = comp_prob.t();
-      
-      // Record the likelihood of the item in it's allocated component
-      likelihood(n) = ll(labels(n));
-    }
-    
-    // The model log likelihood
-    model_likelihood = arma::accu(likelihood);
-    
-    // Number of occupied components (used in BIC calculation)
-    uniqueK = arma::unique(labels);
-    K_occ = uniqueK.n_elem;
-  };
+  // void updateAllocation() {
+  //   
+  //   double u = 0.0;
+  //   arma::uvec uniqueK;
+  //   arma::vec comp_prob(K);
+  //   
+  //   for(arma::uword n = 0; n < N; n++){
+  //     
+  //     ll = logLikelihood(X.row(n).t());
+  //     
+  //     // Update with weights
+  //     comp_prob = ll + log(w);
+  //     
+  //     // Normalise and overflow
+  //     comp_prob = exp(comp_prob - max(comp_prob));
+  //     comp_prob = comp_prob / sum(comp_prob);
+  //     
+  //     // Prediction and update
+  //     u = arma::randu<double>( );
+  //     labels(n) = sum(u > cumsum(comp_prob));
+  //     alloc.row(n) = comp_prob.t();
+  //     
+  //     // Record the likelihood of the item in it's allocated component
+  //     likelihood(n) = ll(labels(n));
+  //   }
+  //   
+  //   // The model log likelihood
+  //   model_likelihood = arma::accu(likelihood);
+  //   
+  //   // Number of occupied components (used in BIC calculation)
+  //   uniqueK = arma::unique(labels);
+  //   K_occ = uniqueK.n_elem;
+  // };
   
   // void updateAllocation() {
   //   
@@ -501,6 +535,15 @@ public:
     cov.zeros();
   }
   
+  
+  // Destructor
+  virtual ~mvnSampler() { };
+  
+  // Print the sampler type.
+  void printType() {
+    std::cout << "\nType: MVN.\n";
+  }
+  
   void sampleFromPriors() {
     for(arma::uword k = 0; k < K; k++){
       cov.slice(k) = arma::iwishrnd(scale, nu);
@@ -590,47 +633,47 @@ public:
     
   }
   
-  void updateAllocation() {
-    
-    double u = 0.0;
-    arma::uvec uniqueK;
-    arma::vec comp_prob(K);
-    
-    for(arma::uword n = 0; n < N; n++){
-      
-      ll = logLikelihood(X.row(n).t());
-      
-      // Update with weights
-      
-      std::cout << "Move yo probs\n";
-      comp_prob = ll + log(w);
-      
-      // Normalise and overflow
-      std::cout << "Normalise and handle overflow\n";
-      comp_prob = exp(comp_prob - max(comp_prob));
-      comp_prob = comp_prob / sum(comp_prob);
-      
-      // Prediction and update
-      std::cout << "Predict class\n";
-      u = arma::randu<double>( );
-      labels(n) = sum(u > cumsum(comp_prob));
-      alloc.row(n) = comp_prob.t();
-      
-      // Record the likelihood of the item in it's allocated component
-      likelihood(n) = ll(labels(n));
-    }
-    
-    std::cout << "Model likeihood\n";
-    
-    // The model log likelihood
-    model_likelihood = arma::accu(likelihood);
-    
-    std::cout << "Unique K\n";
-    
-    // Number of occupied components (used in BIC calculation)
-    uniqueK = arma::unique(labels);
-    K_occ = uniqueK.n_elem;
-  };
+  // void updateAllocation() {
+  //   
+  //   double u = 0.0;
+  //   arma::uvec uniqueK;
+  //   arma::vec comp_prob(K);
+  //   
+  //   for(arma::uword n = 0; n < N; n++){
+  //     
+  //     ll = logLikelihood(X.row(n).t());
+  //     
+  //     // Update with weights
+  //     
+  //     std::cout << "Move yo probs\n";
+  //     comp_prob = ll + log(w);
+  //     
+  //     // Normalise and overflow
+  //     std::cout << "Normalise and handle overflow\n";
+  //     comp_prob = exp(comp_prob - max(comp_prob));
+  //     comp_prob = comp_prob / sum(comp_prob);
+  //     
+  //     // Prediction and update
+  //     std::cout << "Predict class\n";
+  //     u = arma::randu<double>( );
+  //     labels(n) = sum(u > cumsum(comp_prob));
+  //     alloc.row(n) = comp_prob.t();
+  //     
+  //     // Record the likelihood of the item in it's allocated component
+  //     likelihood(n) = ll(labels(n));
+  //   }
+  //   
+  //   std::cout << "Model likeihood\n";
+  //   
+  //   // The model log likelihood
+  //   model_likelihood = arma::accu(likelihood);
+  //   
+  //   std::cout << "Unique K\n";
+  //   
+  //   // Number of occupied components (used in BIC calculation)
+  //   uniqueK = arma::unique(labels);
+  //   K_occ = uniqueK.n_elem;
+  // };
   
   // void updateAllocation() {
   //   
@@ -661,7 +704,7 @@ class categoricalSampler: public sampler {
 
 public:
 
-  double phi;
+  double phi = 0.0;
   arma::mat prob;
 
   using sampler::sampler;
@@ -672,13 +715,21 @@ public:
     arma::vec _concentration,
     arma::mat _X
   ) : sampler(_K, _labels, _concentration, _X) {
-    phi = arma::accu(_X);
+    phi = arma::accu(_X) / (N * P);
 
     // Probability for each class
     prob.set_size(P, _K);
     prob.zeros();
   }
+  
+  // Destructor
+  virtual ~categoricalSampler() { };
 
+  // Print the sampler type.
+  void printType() {
+    std::cout << "\nType: Categorical.\n";
+  }
+  
   void sampleFromPriors(){
     for(arma::uword k = 0; k < K; k++){
       prob.col(k) = rBeta(P, 1 - phi, phi);
@@ -697,8 +748,8 @@ public:
       if(n_k > 0){
 
         arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
-        component_column_prop = arma::sum(component_data);
-
+        component_column_prop = arma::sum(component_data) / n_k;
+        
         for(arma::uword p = 0; p < P; p++){
 
           prob(p, k) = rBeta((1 - component_column_prop(p)) + (1 - phi), component_column_prop(p) + phi);
@@ -708,7 +759,6 @@ public:
       }
     }
   }
-  
   
   arma::vec logLikelihood(arma::vec point) {
     
@@ -734,41 +784,352 @@ public:
     
   }
   
-  void updateAllocation() {
-    
-    double u = 0.0;
-    arma::uvec uniqueK;
-    arma::vec comp_prob(K);
-    
-    for(arma::uword n = 0; n < N; n++){
-      
-      ll = logLikelihood(X.row(n).t());
-      
-      // Update with weights
-      comp_prob = ll + log(w);
-      
-      // Normalise and overflow
-      comp_prob = exp(comp_prob - max(comp_prob));
-      comp_prob = comp_prob / sum(comp_prob);
-      
-      // Prediction and update
-      u = arma::randu<double>( );
-      labels(n) = sum(u > cumsum(comp_prob));
-      alloc.row(n) = comp_prob.t();
-      
-      // Record the likelihood of the item in it's allocated component
-      likelihood(n) = ll(labels(n));
-    }
-    
-    // The model log likelihood
-    model_likelihood = arma::accu(likelihood);
-    
-    // Number of occupied components (used in BIC calculation)
-    uniqueK = arma::unique(labels);
-    K_occ = uniqueK.n_elem;
-  };
+  // void updateAllocation() {
+  //   
+  //   double u = 0.0;
+  //   arma::uvec uniqueK;
+  //   arma::vec comp_prob(K);
+  //   
+  //   std::cout <<"In allocation function.\n";
+  //   
+  //   for(arma::uword n = 0; n < N; n++){
+  //     
+  //     std::cout <<"Log likelihood.\n";
+  //     
+  //     ll = logLikelihood(X.row(n).t());
+  //     
+  //     std::cout << "ll dim:\n" << arma::size(ll) << "\n\n";
+  //     
+  //     std::cout <<"Weights.\n";
+  //     
+  //     // Update with weights
+  //     comp_prob = ll + log(w);
+  //     
+  //     // Normalise and overflow
+  //     comp_prob = exp(comp_prob - max(comp_prob));
+  //     comp_prob = comp_prob / sum(comp_prob);
+  //     
+  //     std::cout <<"Prediciton.\n";
+  //     
+  //     // Prediction and update
+  //     u = arma::randu<double>( );
+  //     
+  //     std::cout <<"Labels.\n";
+  //     labels(n) = sum(u > cumsum(comp_prob));
+  //     
+  //     std::cout <<"Allocation probability.\n";
+  //     alloc.row(n) = comp_prob.t();
+  //     
+  //     // Record the likelihood of the item in it's allocated component
+  //     likelihood(n) = ll(labels(n));
+  //   }
+  //   
+  //   std::cout <<"Model likelihood.\n";
+  //   
+  //   // The model log likelihood
+  //   model_likelihood = arma::accu(likelihood);
+  //   
+  //   // Number of occupied components (used in BIC calculation)
+  //   uniqueK = arma::unique(labels);
+  //   K_occ = uniqueK.n_elem;
+  // };
   
 };
+
+// Factory for creating instances of samplers
+// class samplerFactory
+// {
+// private:
+//   samplerFactory();
+//   samplerFactory(const samplerFactory &) { }
+//   samplerFactory &operator=(const samplerFactory &) { return *this; }
+// 
+//   typedef map FactoryMap;
+//   FactoryMap m_FactoryMap;
+// public:
+//   ~samplerFactory() { m_FactoryMap.clear(); }
+// 
+//   static samplerFactory *Get()
+//   {
+//     static samplerFactory instance;
+//     return &instance;
+//   }
+// 
+//   void Register(const string &dataType, CreateSamplerFn pfnCreate);
+//   sampler *CreateSampler(const string &dataType);
+// 
+//   samplerFactory(arma::uword K,
+//                  arma::uvec labels,
+//                  arma::vec concentration,
+//                  arma::mat X)
+//   {
+//     Register("G", &gaussianSampler(K, labels, concentration, X);
+//     Register("MVN", &mvnSampler(K, labels, concentration, X));
+//     Register("C", &categoricalSampler(K, labels, concentration, X));
+//   }
+// };
+
+
+class samplerFactory
+{
+  public:
+  enum samplerType {
+    G = 0,
+    MVN = 1,
+    C = 2
+  };
+// 
+//   static std::unique_ptr<sampler> *newSampler(const std::string &description,
+//                              arma::uword K,
+//                              arma::uvec labels,
+//                              arma::vec concentration,
+//                              arma::mat X)
+//   {
+//     if(description == "G")
+//       return std::unique_ptr<gaussianSampler>(new gaussianSampler(K, labels, concentration, X));
+//     if(description == "MVN")
+//       return std::unique_ptr<mvnSampler>(new mvnSampler(K, labels, concentration, X));
+//     return nullptr;
+//   }
+//   
+
+
+// https://www.youtube.com/watch?v=XyNWEWUSa5E
+// std::unique_ptr<sampler>
+// sampler *
+  static  std::unique_ptr<sampler> createSampler(samplerType type,
+                                         arma::uword K,
+                                         arma::uvec labels,
+                                         arma::vec concentration,
+                                         arma::mat X) {
+    
+    // std::unique_ptr<sampler> sampler_ptr = NULL;
+    // sampler *my_sampler = NULL;
+    
+    switch (type) {
+    //   case G: {
+    //     std::cout << "Gaussian!\n";
+    //     my_sampler = new gaussianSampler(K, labels, concentration, X);
+    //     break;
+    //     // sampler_ptr = std::unique_ptr<gaussianSampler>(new gaussianSampler(K, labels, concentration, X)); 
+    //     // break; 
+    //     // return sampler_ptr;
+    //   }
+    //   case MVN:{
+    //     std::cout << "MVN!\n";
+    //     my_sampler = new mvnSampler(K, labels, concentration, X);
+    //     break;
+    //     // sampler_ptr = std::unique_ptr<mvnSampler>(new mvnSampler(K, labels, concentration, X));
+    //     // break; 
+    //     // return sampler_ptr;
+    //   }
+    //   case C: {
+    //     std::cout << "Categorical!\n";
+    //     my_sampler = new categoricalSampler(K, labels, concentration, X);
+    //     break;
+    //     // sampler_ptr = std::unique_ptr<categoricalSampler>(new categoricalSampler(K, labels, concentration, X));
+    //     // break; 
+    //     // return sampler_ptr;
+    //   }
+    //   default: throw "invalid sampler type.";
+    // }
+    //  
+    //  my_sampler->printType();
+    //  // sampler_ptr->printType();
+    // 
+    // return my_sampler;
+    // return sampler_ptr;
+      
+    // return *my_sampler;
+    case G: return std::make_unique<gaussianSampler>(K, labels, concentration, X);
+    case MVN: return std::make_unique<mvnSampler>(K, labels, concentration, X);
+    case C:    return std::make_unique<categoricalSampler>(K, labels, concentration, X);
+    default: throw "invalid sampler type.";
+    }
+    
+  }
+
+  // private:
+  //   readonly Dictionary<string, Func<sampler>> samplers;
+  // 
+  // public:
+  //   samplerFactory() {
+  //     samplers = new Dictionary<string, Func<sampler>> ();
+  //   }
+  // 
+  //   sampler this[string samplerType] => createSampler(samplerType);
+  // 
+  //   sampler createSampler(string samplerType) => sampler[samplerType]();
+  // 
+  //   string[] registeredTypes => samplers.Keys.ToArray();
+  // 
+  //   void registerSampler(string samplerType, Func<sampler> factoryMethod) {
+  //     if (string.IsNullOrEmpty(samperType)) return;
+  //     if (factoryMethod is null) return;
+  //     
+  //     samplers[samplerType] = factoryMethod;
+  //   }
+  // 
+};
+
+// class mixtureModel {
+// private:
+// 
+// public:
+//   
+//   arma::uword N =0, K = 0;
+//   double model_likelihood = 0.0, BIC = 0.0;
+//   arma::vec ll, likelihood;
+// 
+//   mixtureModel (
+//       samplerFactory::samplerType val,
+//       arma::uword _K,
+//       arma::uvec _labels,
+//       arma::vec _concentration,
+//       arma::mat _X)
+//   {
+// 
+//   auto sampler_ptr = my_factory.createSampler(val,
+//                                               _K,
+//                                               _labels,
+//                                               _concentration,
+//                                               _X);
+//     
+//     arma::uword N = sampler_ptr->N;
+//     arma::uword K = _K;
+//     
+//     // Log likelihood (individual and model)
+//     ll = arma::zeros<arma::vec>(K);
+//     likelihood = arma::zeros<arma::vec>(N);
+//     
+//     
+//   }
+//   
+//   void updateAllocation() {
+//     
+//     
+//     double u = 0.0;
+//     arma::uvec uniqueK;
+//     arma::vec comp_prob(K), labels(N);
+//     
+//     for(arma::uword n = 0; n < N; n++){
+//       
+//       ll = sampler_ptr->logLikelihood(X.row(n).t());
+//       
+//       // Update with weights
+//       comp_prob = ll + log(sampler_ptr->w);
+//       
+//       // Normalise and overflow
+//       comp_prob = exp(comp_prob - max(comp_prob));
+//       comp_prob = comp_prob / sum(comp_prob);
+//       
+//       // Prediction and update
+//       u = arma::randu<double>( );
+//       
+//       sampler_ptr->labels(n) = sum(u > cumsum(comp_prob));
+//       
+//       sampler_ptr->alloc.row(n) = comp_prob.t();
+//       
+//       // Record the likelihood of the item in it's allocated component
+//       likelihood(n) = ll(sampler_ptr->labels(n));
+//     }
+//     
+//     // Number of occupied components (used in BIC calculation)
+//     uniqueK = arma::unique(labels);
+//     sampler_ptr->K_occ = uniqueK.n_elem;
+//     
+//     // The model log likelihood
+//     model_likelihood = arma::accu(likelihood);
+//     
+//   };
+//     
+//   void calcBIC(){
+//     
+//     BIC = sampler_ptr->n_param * std::log(N) - 2 * model_likelihood;
+//     
+//   }
+// 
+// };
+
+// void updateAllocation(std::unique_ptr<sampler> sampler_ptr) {
+// 
+//   arma::uword N = sampler_ptr->N;
+//   arma::uword K = sampler_ptr->K;
+//   double u = 0.0;
+//   arma::uvec uniqueK;
+//   arma::vec comp_prob(K), ll(K), likelihood(N);
+//   auto X =  sampler_ptr->X;
+// 
+//   for(arma::uword n = 0; n < N; n++){
+// 
+//     ll = sampler_ptr->logLikelihood(X.row(n).t());
+// 
+//     // Update with weights
+//     comp_prob = ll + log(sampler_ptr->w);
+// 
+//     // Normalise and overflow
+//     comp_prob = exp(comp_prob - max(comp_prob));
+//     comp_prob = comp_prob / sum(comp_prob);
+// 
+//     // Prediction and update
+//     u = arma::randu<double>( );
+// 
+//     sampler_ptr->labels(n) = sum(u > cumsum(comp_prob));
+// 
+//     sampler_ptr->alloc.row(n) = comp_prob.t();
+// 
+//     // Record the likelihood of the item in it's allocated component
+//     likelihood(n) = ll(sampler_ptr->labels(n));
+//   }
+// 
+//   // Number of occupied components (used in BIC calculation)
+//   uniqueK = arma::unique(sampler_ptr->labels);
+//   sampler_ptr->K_occ = uniqueK.n_elem;
+// 
+//   // The model log likelihood
+//   sampler_ptr->model_likelihood = arma::accu(likelihood);
+// 
+// };
+
+// void updateAllocation(sampler sampler_ptr) {
+//   
+//   arma::uword N = sampler_ptr->N;
+//   arma::uword K = sampler_ptr->K;
+//   double u = 0.0;
+//   arma::uvec uniqueK;
+//   arma::vec comp_prob(K), ll(K), likelihood(N);
+//   auto X =  sampler_ptr->X;
+//   
+//   for(arma::uword n = 0; n < N; n++){
+//     
+//     ll = sampler_ptr->logLikelihood(X.row(n).t());
+//     
+//     // Update with weights
+//     comp_prob = ll + log(sampler_ptr->w);
+//     
+//     // Normalise and overflow
+//     comp_prob = exp(comp_prob - max(comp_prob));
+//     comp_prob = comp_prob / sum(comp_prob);
+//     
+//     // Prediction and update
+//     u = arma::randu<double>( );
+//     
+//     sampler_ptr->labels(n) = sum(u > cumsum(comp_prob));
+//     
+//     sampler_ptr->alloc.row(n) = comp_prob.t();
+//     
+//     // Record the likelihood of the item in it's allocated component
+//     likelihood(n) = ll(sampler_ptr->labels(n));
+//   }
+//   
+//   // Number of occupied components (used in BIC calculation)
+//   uniqueK = arma::unique(sampler_ptr->labels);
+//   sampler_ptr->K_occ = uniqueK.n_elem;
+//   
+//   // The model log likelihood
+//   sampler_ptr->model_likelihood = arma::accu(likelihood);
+//   
+// };
 
 //' @title Mixture model
 //' @description Performs MCMC sampling for a mixture model.
@@ -782,11 +1143,11 @@ public:
 //' @return Named list of the matrix of MCMC samples generated (each row 
 //' corresponds to a different sample) and BIC for each saved iteration.
 // [[Rcpp::export]]
-Rcpp::List mixtureModel (
+Rcpp::List sampleMixtureModel (
     arma::mat X,
     arma::uword K,
     arma::uvec labels,
-    std::string dataType,
+    int dataType,
     arma::uword R,
     arma::uword thin,
     arma::vec concentration,
@@ -796,51 +1157,75 @@ Rcpp::List mixtureModel (
   // Set the random number
   std::default_random_engine generator(seed);
   
-  // sampler _my_sampler(K, labels, concentration, X);
-  
-  // Declare the sampler to be used
-  // if(dataType.compare("G") == 0){
-  //   gaussianSampler _my_sampler(K, labels, concentration, X);
+  // if(dataType == "G"){
+  //   samplerFactory::samplerType dataType G;
   // }
+  // 
+  
+  samplerFactory my_factory;
+  
+  samplerFactory::samplerType val = static_cast<samplerFactory::samplerType>(dataType);
+  
+  std::unique_ptr<sampler> sampler_ptr = my_factory.createSampler(val,
+                                              K,
+                                              labels,
+                                              concentration,
+                                              X);
+  
+  // std::unique_ptr<sampler> sampler_ptr = samplerFactory::createSampler(val,
+  //                                                                K,
+  //                                                                labels,
+  //                                                                concentration,
+  //                                                                X);
+  
+  // auto sampler_ptr = samplerFactory::createSampler(val,
+  //                                             K,
+  //                                             labels,
+  //                                             concentration,
+  //                                             X);
+  
+  
+  // auto my_sampler = samplerFactory::createSampler(val,
+  //                                                                      K,
+  //                                                                      labels,
+  //                                                                      concentration,
+  //                                                                      X);
 
-  // if(dataType.compare("MVN") == 0){
-  //   mvnSampler _my_sampler(K, labels, concentration, X);
-  // }
-  // 
-  // if(dataType.compare("C") == 0){
-  //   categoricalSampler _my_sampler(K, labels, concentration, X);
-  // }
-  // 
-  // auto my_sampler = _my_sampler;
-  
-  gaussianSampler my_sampler(K, labels, concentration, X);
-  
   // The output matrix
   arma::umat class_record(floor(R / thin), X.n_rows);
   class_record.zeros();
-  
+
   // We save the BIC at each iteration
   arma::vec BIC_record = arma::zeros<arma::vec>(floor(R / thin));
-  
+
   arma::uword save_int=0;
-  
+
   // Sampler from priors (this is unnecessary)
-  my_sampler.sampleFromPriors();
-  
+  // my_sampler.sampleFromPriors();
+  sampler_ptr->sampleFromPriors();
+
   // Iterate over MCMC moves
   for(arma::uword r = 0; r < R; r++){
+
+    // my_sampler.updateWeights();
+    // my_sampler.sampleParameters();
+    // my_sampler.updateAllocation();
     
-    my_sampler.updateWeights();
-    my_sampler.sampleParameters();
-    my_sampler.updateAllocation();
-    
+    sampler_ptr->updateWeights();
+    sampler_ptr->sampleParameters();
+    sampler_ptr->updateAllocation();
+    //   
     // Record results
     if((r + 1) % thin == 0){
+
+      // my_sampler.calcBIC();
+      sampler_ptr->calcBIC();
       
-      my_sampler.calcBIC();
-      BIC_record( save_int ) = my_sampler.BIC;
-      
-      class_record.row( save_int ) = my_sampler.labels.t();
+      // BIC_record( save_int ) = my_sampler.BIC;
+      BIC_record( save_int ) = sampler_ptr->BIC; // my_sampler.BIC;
+
+      // class_record.row( save_int ) = my_sampler.labels.t();
+      class_record.row( save_int ) = sampler_ptr->labels.t(); //my_sampler.labels.t();
       save_int++;
     }
   }

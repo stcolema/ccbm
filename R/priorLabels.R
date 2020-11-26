@@ -10,5 +10,5 @@
 #' @export
 priorLabels <- function(alpha, K, N) {
   w <- stickBreakingPrior(alpha, K)
-  initial_labels <- sample(1:K, N, replace = T)
+  initial_labels <- sample(1:K, N, replace = T, prob = w)
 }

@@ -17,28 +17,28 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// mixtureModel
-Rcpp::List mixtureModel(arma::mat X, arma::uword K, arma::uvec labels, std::string dataType, arma::uword R, arma::uword thin, arma::vec concentration, arma::uword seed);
-RcppExport SEXP _ccbm_mixtureModel(SEXP XSEXP, SEXP KSEXP, SEXP labelsSEXP, SEXP dataTypeSEXP, SEXP RSEXP, SEXP thinSEXP, SEXP concentrationSEXP, SEXP seedSEXP) {
+// sampleMixtureModel
+Rcpp::List sampleMixtureModel(arma::mat X, arma::uword K, arma::uvec labels, int dataType, arma::uword R, arma::uword thin, arma::vec concentration, arma::uword seed);
+RcppExport SEXP _ccbm_sampleMixtureModel(SEXP XSEXP, SEXP KSEXP, SEXP labelsSEXP, SEXP dataTypeSEXP, SEXP RSEXP, SEXP thinSEXP, SEXP concentrationSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat >::type X(XSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type K(KSEXP);
     Rcpp::traits::input_parameter< arma::uvec >::type labels(labelsSEXP);
-    Rcpp::traits::input_parameter< std::string >::type dataType(dataTypeSEXP);
+    Rcpp::traits::input_parameter< int >::type dataType(dataTypeSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type R(RSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type thin(thinSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type concentration(concentrationSEXP);
     Rcpp::traits::input_parameter< arma::uword >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(mixtureModel(X, K, labels, dataType, R, thin, concentration, seed));
+    rcpp_result_gen = Rcpp::wrap(sampleMixtureModel(X, K, labels, dataType, R, thin, concentration, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ccbm_createSimilarityMat", (DL_FUNC) &_ccbm_createSimilarityMat, 1},
-    {"_ccbm_mixtureModel", (DL_FUNC) &_ccbm_mixtureModel, 8},
+    {"_ccbm_sampleMixtureModel", (DL_FUNC) &_ccbm_sampleMixtureModel, 8},
     {NULL, NULL, 0}
 };
 

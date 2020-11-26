@@ -35,7 +35,7 @@ gaussianMixtureModel <- function(X, R, thin,
     initial_labels <- priorLabels(alpha, K_max, nrow(X))
   }
 
-  samples <- mixtureModel(
+  samples <- sampleMixtureModel(
     X,
     K_max,
     initial_labels,

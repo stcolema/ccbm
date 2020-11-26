@@ -41,7 +41,7 @@ bayesMclust <- function(X, R, thin, K,
 
   # Create the list of samples and BIC vectors for each choice of K
   mclust_samples <- lapply(K, function(x) {
-    bayesmclust(X, R, thin,
+    bayesMclustInd(X, R, thin,
       K_max = x,
       alpha = alpha,
       dataType = dataType,
