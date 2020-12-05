@@ -40,9 +40,15 @@ x <- generateSimulationDataset(K, N, P,
   cluster_sd = cluster_sd
 )
 
+x2 <- generateSimulationDataset(K, N, P,
+ delta_mu = delta_mu,
+ cluster_sd = 3
+)
+
 annotatedHeatmap(x$data, x$cluster_IDs)
 
 X <- my_data <- as.matrix(scale(x$data))
+X2 <- as.matrix(scale(x2$data))
 
 library(ggplot2)
 
@@ -94,7 +100,9 @@ library(ggplot2)
 # 
 # my_labels <- sample(1:K, N, replace = T)
 
-gaussian_cl <- gaussianMixtureModel(X, 50, 1,
+# Easy clustering ==============================================================
+
+gaussian_cl <- gaussianMixtureModel(X, 200, 5,
                                     initial_labels = NULL, 
                                     K_max = 50, 
                                     alpha = 1, 
@@ -109,13 +117,13 @@ cl_star <- maxpear(psm)$cl
 annotatedHeatmap(X, cl_star)
 arandi(cl_star, x$cluster_IDs)
 
-mvn_cl <- gaussianMixtureModel(X, 200, 5,
+mvn_samples <- gaussianMixtureModel(X, 200, 5,
                                     initial_labels = NULL, 
                                     K_max = 50, 
                                     alpha = 1, 
                                     dataType = 1)
 
-psm2 <- mvn_cl$samples %>% 
+psm2 <- mvn_samples$samples %>% 
   createSimilarityMat()
 
 pheatmap(psm2)
@@ -123,6 +131,70 @@ pheatmap(psm2)
 mvn_cl <- maxpear(psm2)$cl
 annotatedHeatmap(X, mvn_cl)
 arandi(mvn_cl, x$cluster_IDs)
+
+tagm_samples <- gaussianMixtureModel(X, 200, 5,
+                               initial_labels = NULL, 
+                               K_max = 50, 
+                               alpha = 1, 
+                               dataType = 3)
+
+psm3 <- tagm_samples$samples %>% 
+  createSimilarityMat()
+
+pheatmap(psm3)
+
+tagm_cl <- maxpear(psm3)$cl
+annotatedHeatmap(X, tagm_cl)
+arandi(tagm_cl, x$cluster_IDs)
+
+tagmInd_samples <- gaussianMixtureModel(X, 20000, 100,
+                                     initial_labels = NULL, 
+                                     K_max = 50, 
+                                     alpha = 1, 
+                                     dataType = 4)
+
+psm4 <- tagmInd_samples$samples %>% 
+  createSimilarityMat()
+
+pheatmap(psm4)
+
+tagmInd_cl <- maxpear(psm4)$cl
+annotatedHeatmap(X, tagmInd_cl)
+arandi(tagmInd_cl, x$cluster_IDs)
+
+# # Difficult clustering =========================================================
+# 
+# mvn_samples_hard <- gaussianMixtureModel(X2, 2000, 50,
+#                                     initial_labels = NULL, 
+#                                     K_max = 50, 
+#                                     alpha = 1, 
+#                                     dataType = 1)
+# 
+# psm2_2 <- mvn_samples_hard$samples %>% 
+#   createSimilarityMat()
+# 
+# pheatmap(psm2_2)
+# 
+# mvn_cl <- maxpear(psm2_2)$cl
+# annotatedHeatmap(X2, mvn_cl)
+# arandi(mvn_cl, x2$cluster_IDs)
+# 
+# tagm_samples_hard <- gaussianMixtureModel(X2, 2000, 50,
+#                                      initial_labels = NULL, 
+#                                      K_max = 50, 
+#                                      alpha = 1, 
+#                                      dataType = 3)
+# 
+# psm3_2 <- tagm_samples_hard$samples %>% 
+#   createSimilarityMat()
+# 
+# pheatmap(psm3_2)
+# 
+# tagm_cl <- maxpear(psm3_2)$cl
+# annotatedHeatmap(X2, tagm_cl)
+# arandi(tagm_cl, x$cluster_IDs)
+
+# Binary data ==================================================================
 
 
 binary_data <- generateBinaryData(N, P, K)

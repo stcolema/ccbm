@@ -68,7 +68,27 @@ arma::mat calcSampleCov(arma::mat data,
   return sample_covariance;
 }
 
-
+//' @name sampler
+//' @title Generic mixture type
+//' @description The class that the specific sampler types inherit from. Used as
+//' the generic mixture type.
+//' @field new Constructor \itemize{
+//' \item Parameter: K - the number of components to model
+//' \item Parameter: labels - the initial clustering of the data
+//' \item Parameter: concentration - the vector for the prior concentration of 
+//' the Dirichlet distribution of the component weights
+//' \item Parameter: X - the data to model
+//' }
+//' @field printType Print the sampler type called.
+//' @field updateWeights Update the weights of each component based on current 
+//' clustering.
+//' @field updateAllocation Sample a new clustering. 
+//' @field sampleFromPrior Virtual placeholder for sampling from the priors of 
+//' the specific mixtures.
+//' @field calcBIC Virtual placeholder for the function that calculates the BIC 
+//' of specific mixture models.
+//' @field logLikelihood Virtual placeholder for the function that calculates 
+//' the likelihood of a given point in each component of specific mixture models.
 class sampler {
   
 private:
@@ -139,7 +159,7 @@ public:
   }
   
   // Functions required of all mixture models
-  void updateWeights(){
+  virtual void updateWeights(){
     
     double a = 0.0;
     
@@ -159,7 +179,7 @@ public:
     w = w / arma::sum(w);
   };
   
-  void updateAllocation() {
+  virtual void updateAllocation() {
 
     double u = 0.0;
     arma::uvec uniqueK;
@@ -216,7 +236,29 @@ public:
   
 };
 
-class gaussianSampler: public sampler {
+//' @name gaussianSampler
+//' @title Gaussian mixture type
+//' @description The sampler for a mixture of Gaussians, where each feature is
+//' assumed to be independent (i.e. a multivariate Normal with a diagonal 
+//' covariance matrix).
+//' @field new Constructor \itemize{
+//' \item Parameter: K - the number of components to model
+//' \item Parameter: labels - the initial clustering of the data
+//' \item Parameter: concentration - the vector for the prior concentration of 
+//' the Dirichlet distribution of the component weights
+//' \item Parameter: X - the data to model
+//' }
+//' @field printType Print the sampler type called.
+//' @field updateWeights Update the weights of each component based on current 
+//' clustering.
+//' @field updateAllocation Sample a new clustering. 
+//' @field sampleFromPrior Sample from the priors for the Gaussian density.
+//' @field calcBIC Calculate the BIC of the model.
+//' @field logLikelihood Calculate the likelihood of a given data point in each
+//' component. \itemize{
+//' \item Parameter: point - a data point.
+//' }
+class gaussianSampler: virtual public sampler {
   
 public:
   
@@ -291,7 +333,7 @@ public:
   virtual ~gaussianSampler() { };
   
   // Print the sampler type.
-  void printType() {
+  virtual void printType() {
     std::cout << "\nType: Gaussian.\n";
   }
   
@@ -393,7 +435,28 @@ public:
   
 };
 
-class mvnSampler: public sampler {
+//' @name mvnSampler
+//' @title Multivariate Normal mixture type
+//' @description The sampler for the Multivariate Normal mixture model.
+//' @field new Constructor \itemize{
+//' \item Parameter: K - the number of components to model
+//' \item Parameter: labels - the initial clustering of the data
+//' \item Parameter: concentration - the vector for the prior concentration of 
+//' the Dirichlet distribution of the component weights
+//' \item Parameter: X - the data to model
+//' }
+//' @field printType Print the sampler type called.
+//' @field updateWeights Update the weights of each component based on current 
+//' clustering.
+//' @field updateAllocation Sample a new clustering. 
+//' @field sampleFromPrior Sample from the priors for the multivariate normal
+//' density.
+//' @field calcBIC Calculate the BIC of the model.
+//' @field logLikelihood Calculate the likelihood of a given data point in each
+//' component. \itemize{
+//' \item Parameter: point - a data point.
+//' }
+class mvnSampler: virtual public sampler {
   
 public:
   double kappa, nu;
@@ -434,7 +497,7 @@ public:
   virtual ~mvnSampler() { };
   
   // Print the sampler type.
-  void printType() {
+  virtual void printType() {
     std::cout << "\nType: MVN.\n";
   }
   
@@ -529,7 +592,26 @@ public:
   
 };
 
-
+//' @name categoricalSampler
+//' @title Categorical mixture type
+//' @description The sampler for the Categorical mixture model.
+//' @field new Constructor \itemize{
+//' \item Parameter: K - the number of components to model
+//' \item Parameter: labels - the initial clustering of the data
+//' \item Parameter: concentration - the vector for the prior concentration of 
+//' the Dirichlet distribution of the component weights
+//' \item Parameter: X - the data to model
+//' }
+//' @field printType Print the sampler type called.
+//' @field updateWeights Update the weights of each component based on current 
+//' clustering.
+//' @field updateAllocation Sample a new clustering. 
+//' @field sampleFromPrior Sample from the priors for the Categorical density.
+//' @field calcBIC Calculate the BIC of the model.
+//' @field logLikelihood Calculate the likelihood of a given data point in each
+//' component. \itemize{
+//' \item Parameter: point - a data point.
+//' }
 class categoricalSampler: public sampler {
 
 public:
@@ -616,17 +698,645 @@ public:
   
 };
 
+
+//' @name tAdjustedSampler
+//' @title Base class for adding a t-distribution to sweep up outliers in the 
+//' model.
+//' @description The class that the specific TAGM types inherit from. 
+//' @field new Constructor \itemize{
+//' \item Parameter: K - the number of components to model
+//' \item Parameter: labels - the initial clustering of the data
+//' \item Parameter: concentration - the vector for the prior concentration of 
+//' the Dirichlet distribution of the component weights
+//' \item Parameter: X - the data to model
+//' }
+//' @field updateOutlierWeights Updates the weight of the outlier component.
+//' @field updateWeights Update the weights of each component based on current 
+//' clustering, excluding the outliers.
+//' @field sampleOutlier Sample is the nth item is an outlier. \itemize{
+//' \item Parameter n: the index of the individual in the data matrix and 
+//' allocation vector.
+//' }
+//' @field updateAllocation Sample a new clustering and simultaneously allocate 
+//' items to the outlier distribution.
+//' @field calcTdistnLikelihood Virtual placeholder for the function that calculates 
+//' the likelihood of a given point in a t-distribution. \itemize{
+//' \item Parameter: point - a data point.
+//' }
+class tAdjustedSampler : virtual public sampler {
+  
+private:
+  
+public:
+  // for use in the outlier distribution
+  arma::uvec outlier;
+  arma::vec global_mean;
+  arma::mat global_cov;
+  double df = 4.0, u = 2.0, v = 10.0, b = 0.0, outlier_weight = 0.0;
+  
+  tAdjustedSampler(arma::uword _K,
+          arma::uvec _labels, 
+          arma::vec _concentration,
+          arma::mat _X
+  ) : sampler(_K, _labels, _concentration, _X) {
+    
+    // for use in the outlier distribution
+    // global_cov = 0.5 * arma::cov(X); 
+    // global_mean = arma::trans(arma::mean(X, 0));
+    
+    outlier = arma::zeros<arma::uvec>(N);
+    
+    b = (double) sum(outlier);
+    outlier_weight = rBeta(b + u, N + v - b);
+    
+  };
+  
+  virtual double calcTdistnLikelihood(arma::vec point) {
+    
+    double log_det = 0.0;
+    double exponent = 0.0;
+    double log_likelihood = 0.0;
+    
+    exponent = arma::as_scalar(
+      arma::trans(point - global_mean) 
+      * arma::inv(global_cov)
+      * (point - global_mean)
+    );
+    
+    log_det = arma::log_det(global_cov).real();
+    
+    log_likelihood = lgamma((df + P) / 2.0) 
+      - lgamma(df / 2.0) 
+      - (double)P / 2.0 * log(df * M_PI) 
+      - 0.5 * log_det 
+      - ((df + (double) P) / 2.0) * log(1.0 + (1.0 / P) * exponent);
+      
+      return log_likelihood;
+  };
+  
+  void updateOutlierWeights(){
+    b = (double) sum(outlier);
+    outlier_weight = rBeta(b + u, N + v - b);
+  };
+  
+  void updateWeights(){
+    
+    double a = 0.0;
+    
+    for (arma::uword k = 0; k < K; k++) {
+      
+      // Find how many labels have the value
+      members.col(k) = (labels == k) % outlier;
+      N_k(k) = arma::sum(members.col(k));
+      
+      // Update weights by sampling from a Gamma distribution
+      a  = concentration(k) + N_k(k);
+      w(k) = arma::randg( arma::distr_param(a, 1.0) );
+    }
+    
+    // Convert the cluster weights (previously gamma distributed) to Beta 
+    // distributed by normalising
+    w = w / arma::sum(w);
+  };
+  
+  arma::uword sampleOutlier(int n) {
+    
+    arma::vec point = X.row(n).t();
+    // arma::uword k = labels(n);
+    
+    double out_likelihood = 0.0;
+    arma::vec outlier_prob(2);
+    outlier_prob.zeros();
+    
+    // The likelihood of the point in the current cluster
+    outlier_prob(0) = likelihood(n) + log(1 - outlier_weight);
+    
+    // Calculate outlier likelihood
+    out_likelihood = calcTdistnLikelihood(point);
+    out_likelihood += log(out_likelihood);
+    outlier_prob(1) = out_likelihood;
+    
+    // Normalise and overflow
+    outlier_prob = exp(outlier_prob - max(outlier_prob));
+    outlier_prob = outlier_prob / sum(outlier_prob);
+    
+    // Prediction and update
+    u = arma::randu<double>( );
+    return sum(u > cumsum(outlier_prob));
+  };
+  
+  void updateAllocation() {
+    
+    double u = 0.0;
+    arma::uvec uniqueK;
+    arma::vec comp_prob(K);
+    
+    // First update the outlier parameters
+    updateOutlierWeights();
+    
+    for(arma::uword n = 0; n < N; n++){
+      
+      ll = logLikelihood(X.row(n).t());
+      
+      // Update with weights
+      comp_prob = ll + log(w);
+      
+      // Normalise and overflow
+      comp_prob = exp(comp_prob - max(comp_prob));
+      comp_prob = comp_prob / sum(comp_prob);
+      
+      // Prediction and update
+      u = arma::randu<double>( );
+      labels(n) = sum(u > cumsum(comp_prob));
+      alloc.row(n) = comp_prob.t();
+      
+      // Record the likelihood of the item in it's allocated component
+      likelihood(n) = ll(labels(n));
+      
+      // Update if the point is an outlier or not
+      outlier(n) = sampleOutlier(n);
+    }
+    
+    // The model log likelihood
+    model_likelihood = arma::accu(likelihood);
+    
+    // Number of occupied components (used in BIC calculation)
+    uniqueK = arma::unique(labels);
+    K_occ = uniqueK.n_elem;
+  };
+  
+  // void sampleParameters(){
+  //   arma::vec mu_n(P);
+  //   
+  //   arma::uword n_k = 0;
+  //   arma::vec mu_k(P), sample_mean(P);
+  //   arma::mat sample_cov(P, P), dist_from_prior(P, P), scale_n(P, P);
+  //   
+  //   for (arma::uword k = 0; k < K; k++) {
+  //     
+  //     // Find how many labels have the value
+  //     n_k = N_k(k);
+  //     if(n_k > 0){
+  //       
+  //       // Component data
+  //       arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
+  //       
+  //       // Sample mean in the component data
+  //       sample_mean = arma::mean(component_data).t();
+  //       
+  //       // The weighted average of the prior mean and sample mean
+  //       mu_k = (kappa * xi + n_k * sample_mean) / (double)(kappa + N);
+  //       
+  //       sample_cov = calcSampleCov(component_data, sample_mean, n_k, P);
+  //       
+  //       // Calculate the distance of the sample mean from the prior
+  //       dist_from_prior = (sample_mean - xi) * (sample_mean - xi).t();
+  //       
+  //       // Update the scale hyperparameter
+  //       scale_n = scale + sample_cov + ((kappa * N) / (double)(kappa + N)) * dist_from_prior;
+  //       
+  //       cov.slice(k) = arma::iwishrnd(scale_n, nu + n_k);
+  //       
+  //       mu.col(k) = arma::mvnrnd(mu_k, (1.0/kappa) * cov.slice(k), 1);
+  //       
+  //     } else{
+  //       
+  //       cov.slice(k) = arma::iwishrnd(scale, nu);
+  //       mu.col(k) = arma::mvnrnd(xi, (1.0/kappa) * cov.slice(k), 1);
+  //       
+  //     }
+  //     
+  //   }
+  // }
+  
+  void calcBIC(){
+    
+    arma::uword n_param = (P + P * (P + 1) * 0.5) * (K_occ + 1);
+    BIC = n_param * std::log(N) - 2 * model_likelihood;
+    
+  }
+  
+};
+
+//' @name tagmMVN
+//' @title T-ADjusted Gaussian Mixture (TAGM) type
+//' @description The sampler for the TAGM mixture model.
+//' @field new Constructor \itemize{
+//' \item Parameter: K - the number of components to model
+//' \item Parameter: labels - the initial clustering of the data
+//' \item Parameter: concentration - the vector for the prior concentration of 
+//' the Dirichlet distribution of the component weights
+//' \item Parameter: X - the data to model
+//' }
+//' @field printType Print the sampler type called.
+//' @field calcBIC Calculate the BIC of the model.
+//' @field calcTdistnLikelihood Calculate the likelihood of a given data point 
+//' the gloabl t-distirbution. \itemize{
+//' \item Parameter: point - a data point.
+//' }
+class tagmMVN : public tAdjustedSampler, public mvnSampler {
+  
+private:
+  
+public:
+  // for use in the outlier distribution
+  // arma::uvec outlier;
+  // arma::vec global_mean;
+  // arma::mat global_cov;
+  // double df = 4.0, u = 2.0, v = 10.0, b = 0.0, outlier_weight = 0.0;
+  
+  tagmMVN(arma::uword _K,
+          arma::uvec _labels, 
+          arma::vec _concentration,
+          arma::mat _X
+  ) : tAdjustedSampler(_K, _labels, _concentration, _X),
+      mvnSampler(_K, _labels, _concentration, _X),
+      sampler(_K, _labels, _concentration, _X){
+    
+    // for use in the outlier distribution
+    global_cov = 0.5 * arma::cov(X); 
+    global_mean = arma::trans(arma::mean(X, 0));
+    
+    outlier = arma::zeros<arma::uvec>(N);
+    
+    b = (double) sum(outlier);
+    outlier_weight = rBeta(b + u, N + v - b);
+    
+  };
+  
+  void printType() {
+    std::cout << "Type: TAGM.\n";
+  }
+  
+  double calcTdistnLikelihood(arma::vec point) {
+    
+    double log_det = 0.0;
+    double exponent = 0.0;
+    double log_likelihood = 0.0;
+    
+    exponent = arma::as_scalar(
+      arma::trans(point - global_mean) 
+      * arma::inv(global_cov)
+      * (point - global_mean)
+    );
+    
+    log_det = arma::log_det(global_cov).real();
+    
+    log_likelihood = lgamma((df + P) / 2.0) 
+      - lgamma(df / 2.0) 
+      - (double)P / 2.0 * log(df * M_PI) 
+      - 0.5 * log_det 
+      - ((df + (double) P) / 2.0) * log(1.0 + (1.0 / P) * exponent);
+      
+      return log_likelihood;
+  };
+  
+  // void updateOutlierWeights(){
+  //   b = (double) sum(outlier);
+  //   outlier_weight = rBeta(b + u, N + v - b);
+  // };
+  // 
+  // void updateWeights(){
+  //   
+  //   double a = 0.0;
+  //   
+  //   for (arma::uword k = 0; k < K; k++) {
+  //     
+  //     // Find how many labels have the value
+  //     members.col(k) = (labels == k) % outlier;
+  //     N_k(k) = arma::sum(members.col(k));
+  //     
+  //     // Update weights by sampling from a Gamma distribution
+  //     a  = concentration(k) + N_k(k);
+  //     w(k) = arma::randg( arma::distr_param(a, 1.0) );
+  //   }
+  //   
+  //   // Convert the cluster weights (previously gamma distributed) to Beta 
+  //   // distributed by normalising
+  //   w = w / arma::sum(w);
+  // };
+  // 
+  // arma::uword sampleOutlier(int n) {
+  //   
+  //   arma::vec point = X.row(n).t();
+  //   // arma::uword k = labels(n);
+  //   
+  //   double out_likelihood = 0.0;
+  //   arma::vec outlier_prob(2);
+  //   outlier_prob.zeros();
+  //   
+  //   // The likelihood of the point in the current cluster
+  //   outlier_prob(0) = likelihood(n) + log(1 - outlier_weight);
+  //   
+  //   // Calculate outlier likelihood
+  //   out_likelihood = calcTdistnLikelihood(point);
+  //   out_likelihood += log(out_likelihood);
+  //   outlier_prob(1) = out_likelihood;
+  //   
+  //   // Normalise and overflow
+  //   outlier_prob = exp(outlier_prob - max(outlier_prob));
+  //   outlier_prob = outlier_prob / sum(outlier_prob);
+  //   
+  //   // Prediction and update
+  //   u = arma::randu<double>( );
+  //   return sum(u > cumsum(outlier_prob));
+  // };
+  // 
+  // void updateAllocation() {
+  //   
+  //   double u = 0.0;
+  //   arma::uvec uniqueK;
+  //   arma::vec comp_prob(K);
+  //   
+  //   // First update the outlier parameters
+  //   updateOutlierWeights();
+  //   
+  //   for(arma::uword n = 0; n < N; n++){
+  //     
+  //     ll = logLikelihood(X.row(n).t());
+  //     
+  //     // Update with weights
+  //     comp_prob = ll + log(w);
+  //     
+  //     // Normalise and overflow
+  //     comp_prob = exp(comp_prob - max(comp_prob));
+  //     comp_prob = comp_prob / sum(comp_prob);
+  //     
+  //     // Prediction and update
+  //     u = arma::randu<double>( );
+  //     labels(n) = sum(u > cumsum(comp_prob));
+  //     alloc.row(n) = comp_prob.t();
+  //     
+  //     // Record the likelihood of the item in it's allocated component
+  //     likelihood(n) = ll(labels(n));
+  //     
+  //     // Update if the point is an outlier or not
+  //     outlier(n) = sampleOutlier(n);
+  //   }
+  //   
+  //   // The model log likelihood
+  //   model_likelihood = arma::accu(likelihood);
+  //   
+  //   // Number of occupied components (used in BIC calculation)
+  //   uniqueK = arma::unique(labels);
+  //   K_occ = uniqueK.n_elem;
+  // };
+  
+  // void sampleParameters(){
+  //   arma::vec mu_n(P);
+  //   
+  //   arma::uword n_k = 0;
+  //   arma::vec mu_k(P), sample_mean(P);
+  //   arma::mat sample_cov(P, P), dist_from_prior(P, P), scale_n(P, P);
+  //   
+  //   for (arma::uword k = 0; k < K; k++) {
+  //     
+  //     // Find how many labels have the value
+  //     n_k = N_k(k);
+  //     if(n_k > 0){
+  //       
+  //       // Component data
+  //       arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
+  //       
+  //       // Sample mean in the component data
+  //       sample_mean = arma::mean(component_data).t();
+  //       
+  //       // The weighted average of the prior mean and sample mean
+  //       mu_k = (kappa * xi + n_k * sample_mean) / (double)(kappa + N);
+  //       
+  //       sample_cov = calcSampleCov(component_data, sample_mean, n_k, P);
+  //       
+  //       // Calculate the distance of the sample mean from the prior
+  //       dist_from_prior = (sample_mean - xi) * (sample_mean - xi).t();
+  //       
+  //       // Update the scale hyperparameter
+  //       scale_n = scale + sample_cov + ((kappa * N) / (double)(kappa + N)) * dist_from_prior;
+  //       
+  //       cov.slice(k) = arma::iwishrnd(scale_n, nu + n_k);
+  //       
+  //       mu.col(k) = arma::mvnrnd(mu_k, (1.0/kappa) * cov.slice(k), 1);
+  //       
+  //     } else{
+  //       
+  //       cov.slice(k) = arma::iwishrnd(scale, nu);
+  //       mu.col(k) = arma::mvnrnd(xi, (1.0/kappa) * cov.slice(k), 1);
+  //       
+  //     }
+  //     
+  //   }
+  // }
+  
+  void calcBIC(){
+    
+    arma::uword n_param = (P + P * (P + 1) * 0.5) * (K_occ + 1);
+    BIC = n_param * std::log(N) - 2 * model_likelihood;
+    
+  }
+  
+};
+
+//' @name tagmGaussian
+//' @title T-ADjusted Gaussian Mixture (TAGM) type
+//' @description The sampler for the TAGM mixture model with assumption of 
+//' independent features.
+//' @field new Constructor \itemize{
+//' \item Parameter: K - the number of components to model
+//' \item Parameter: labels - the initial clustering of the data
+//' \item Parameter: concentration - the vector for the prior concentration of 
+//' the Dirichlet distribution of the component weights
+//' \item Parameter: X - the data to model
+//' }
+//' @field printType Print the sampler type called.
+//' @field calcBIC Calculate the BIC of the model.
+//' @field calcTdistnLikelihood Calculate the likelihood of a given data point 
+//' the gloabl t-distribution. \itemize{
+//' \item Parameter: point - a data point.
+//' }
+class tagmGaussian : public tAdjustedSampler, public gaussianSampler {
+  
+private:
+  
+public:
+  // for use in the outlier distribution
+  // arma::uvec outlier;
+  // arma::vec global_mean;
+  // arma::mat global_cov;
+  // double df = 4.0, u = 2.0, v = 10.0, b = 0.0, outlier_weight = 0.0;
+  
+  tagmGaussian(
+    arma::uword _K,
+    arma::uvec _labels, 
+    arma::vec _concentration,
+    arma::mat _X
+  ) : tAdjustedSampler(_K, _labels, _concentration, _X),
+  gaussianSampler(_K, _labels, _concentration, _X),
+  sampler(_K, _labels, _concentration, _X) {
+    
+    // for use in the outlier distribution
+    global_cov = 0.5 * arma::stddev(X, 0); 
+    global_mean = arma::trans(arma::mean(X, 0));
+    
+    // outlier = arma::zeros<arma::uvec>(N);
+    // 
+    // b = (double) sum(outlier);
+    // outlier_weight = rBeta(b + u, N + v - b);
+    
+  };
+  
+  void printType() {
+    std::cout << "Type: TAGM (independent features).\n";
+  }
+  
+  double calcTdistnLikelihood(arma::vec point) {
+    
+    double exponent = 0.0;
+    double log_likelihood = 0.0;
+    // double std_dev_p = 0;
+    
+    for(arma::uword p = 0; p < P; p++){
+      
+      // arma::as_scalar(global_cov(p));
+      
+      exponent = std::pow(point(p) - global_mean(p), 2.0) / global_cov(p);
+      
+      log_likelihood += lgamma((df + P) / 2.0) 
+        - lgamma(df / 2.0) 
+        - (double)P / 2.0 * log(df * M_PI) 
+        - 0.5 * global_cov(p) 
+        - ((df + (double) P) / 2.0) * log(1.0 + (1.0 / P) * exponent);
+    }
+    
+      
+      return log_likelihood;
+  };
+  
+  // void updateOutlierWeights(){
+  //   b = (double) sum(outlier);
+  //   outlier_weight = rBeta(b + u, N + v - b);
+  // };
+  // 
+  // void updateWeights(){
+  //   
+  //   double a = 0.0;
+  //   
+  //   for (arma::uword k = 0; k < K; k++) {
+  //     
+  //     // Find how many labels have the value
+  //     members.col(k) = (labels == k) % outlier;
+  //     N_k(k) = arma::sum(members.col(k));
+  //     
+  //     // Update weights by sampling from a Gamma distribution
+  //     a  = concentration(k) + N_k(k);
+  //     w(k) = arma::randg( arma::distr_param(a, 1.0) );
+  //   }
+  //   
+  //   // Convert the cluster weights (previously gamma distributed) to Beta 
+  //   // distributed by normalising
+  //   w = w / arma::sum(w);
+  // };
+  // 
+  // arma::uword sampleOutlier(int n) {
+  //   
+  //   arma::vec point = X.row(n).t();
+  //   // arma::uword k = labels(n);
+  //   
+  //   double out_likelihood = 0.0;
+  //   arma::vec outlier_prob(2);
+  //   outlier_prob.zeros();
+  //   
+  //   // The likelihood of the point in the current cluster
+  //   outlier_prob(0) = likelihood(n) + log(1 - outlier_weight);
+  //   
+  //   // Calculate outlier likelihood
+  //   out_likelihood = calcTdistnLikelihood(point);
+  //   out_likelihood += log(out_likelihood);
+  //   outlier_prob(1) = out_likelihood;
+  //   
+  //   // Normalise and overflow
+  //   outlier_prob = exp(outlier_prob - max(outlier_prob));
+  //   outlier_prob = outlier_prob / sum(outlier_prob);
+  //   
+  //   // Prediction and update
+  //   u = arma::randu<double>( );
+  //   return sum(u > cumsum(outlier_prob));
+  // };
+  // 
+  // void updateAllocation() {
+  //   
+  //   double u = 0.0;
+  //   arma::uvec uniqueK;
+  //   arma::vec comp_prob(K);
+  //   
+  //   // First update the outlier parameters
+  //   updateOutlierWeights();
+  //   
+  //   for(arma::uword n = 0; n < N; n++){
+  //     
+  //     ll = logLikelihood(X.row(n).t());
+  //     
+  //     // Update with weights
+  //     comp_prob = ll + log(w);
+  //     
+  //     // Normalise and overflow
+  //     comp_prob = exp(comp_prob - max(comp_prob));
+  //     comp_prob = comp_prob / sum(comp_prob);
+  //     
+  //     // Prediction and update
+  //     u = arma::randu<double>( );
+  //     labels(n) = sum(u > cumsum(comp_prob));
+  //     alloc.row(n) = comp_prob.t();
+  //     
+  //     // Record the likelihood of the item in it's allocated component
+  //     likelihood(n) = ll(labels(n));
+  //     
+  //     // Update if the point is an outlier or not
+  //     outlier(n) = sampleOutlier(n);
+  //   }
+  //   
+  //   // The model log likelihood
+  //   model_likelihood = arma::accu(likelihood);
+  //   
+  //   // Number of occupied components (used in BIC calculation)
+  //   uniqueK = arma::unique(labels);
+  //   K_occ = uniqueK.n_elem;
+  // };
+  
+  
+  void calcBIC(){
+    
+    arma::uword n_param = (P + P) * (K_occ + 1);
+    BIC = n_param * std::log(N) - 2 * model_likelihood;
+    
+    
+  }
+  
+};
+
 // Factory for creating instances of samplers
+//' @name samplerFactory
+//' @title Factory for different sampler subtypes.
+//' @description The factory allows the type of mixture implemented to change 
+//' based upon the user input.
+//' @field new Constructor \itemize{
+//' \item Parameter: samplerType - the density type to be modelled
+//' \item Parameter: K - the number of components to model
+//' \item Parameter: labels - the initial clustering of the data
+//' \item Parameter: concentration - the vector for the prior concentration of 
+//' the Dirichlet distribution of the component weights
+//' \item Parameter: X - the data to model
+//' }
 class samplerFactory
 {
   public:
   enum samplerType {
     G = 0,
     MVN = 1,
-    C = 2
+    C = 2,
+    TMVN = 3,
+    TG = 4
   };
 
-  static  std::unique_ptr<sampler> createSampler(samplerType type,
+  static std::unique_ptr<sampler> createSampler(samplerType type,
                                          arma::uword K,
                                          arma::uvec labels,
                                          arma::vec concentration,
@@ -634,7 +1344,9 @@ class samplerFactory
   switch (type) {
     case G: return std::make_unique<gaussianSampler>(K, labels, concentration, X);
     case MVN: return std::make_unique<mvnSampler>(K, labels, concentration, X);
-    case C:    return std::make_unique<categoricalSampler>(K, labels, concentration, X);
+    case C: return std::make_unique<categoricalSampler>(K, labels, concentration, X);
+    case TMVN: return std::make_unique<tagmMVN>(K, labels, concentration, X);
+    case TG: return std::make_unique<tagmGaussian>(K, labels, concentration, X);
     default: throw "invalid sampler type.";
     }
     

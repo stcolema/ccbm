@@ -46,6 +46,175 @@ NULL
 #'  sample covariance).
 NULL
 
+#' @name sampler
+#' @title Generic mixture type
+#' @description The class that the specific sampler types inherit from. Used as
+#' the generic mixture type.
+#' @field new Constructor \itemize{
+#' \item Parameter: K - the number of components to model
+#' \item Parameter: labels - the initial clustering of the data
+#' \item Parameter: concentration - the vector for the prior concentration of 
+#' the Dirichlet distribution of the component weights
+#' \item Parameter: X - the data to model
+#' }
+#' @field printType Print the sampler type called.
+#' @field updateWeights Update the weights of each component based on current 
+#' clustering.
+#' @field updateAllocation Sample a new clustering. 
+#' @field sampleFromPrior Virtual placeholder for sampling from the priors of 
+#' the specific mixtures.
+#' @field calcBIC Virtual placeholder for the function that calculates the BIC 
+#' of specific mixture models.
+#' @field logLikelihood Virtual placeholder for the function that calculates 
+#' the likelihood of a given point in each component of specific mixture models.
+NULL
+
+#' @name gaussianSampler
+#' @title Gaussian mixture type
+#' @description The sampler for a mixture of Gaussians, where each feature is
+#' assumed to be independent (i.e. a multivariate Normal with a diagonal 
+#' covariance matrix).
+#' @field new Constructor \itemize{
+#' \item Parameter: K - the number of components to model
+#' \item Parameter: labels - the initial clustering of the data
+#' \item Parameter: concentration - the vector for the prior concentration of 
+#' the Dirichlet distribution of the component weights
+#' \item Parameter: X - the data to model
+#' }
+#' @field printType Print the sampler type called.
+#' @field updateWeights Update the weights of each component based on current 
+#' clustering.
+#' @field updateAllocation Sample a new clustering. 
+#' @field sampleFromPrior Sample from the priors for the Gaussian density.
+#' @field calcBIC Calculate the BIC of the model.
+#' @field logLikelihood Calculate the likelihood of a given data point in each
+#' component. \itemize{
+#' \item Parameter: point - a data point.
+#' }
+NULL
+
+#' @name mvnSampler
+#' @title Multivariate Normal mixture type
+#' @description The sampler for the Multivariate Normal mixture model.
+#' @field new Constructor \itemize{
+#' \item Parameter: K - the number of components to model
+#' \item Parameter: labels - the initial clustering of the data
+#' \item Parameter: concentration - the vector for the prior concentration of 
+#' the Dirichlet distribution of the component weights
+#' \item Parameter: X - the data to model
+#' }
+#' @field printType Print the sampler type called.
+#' @field updateWeights Update the weights of each component based on current 
+#' clustering.
+#' @field updateAllocation Sample a new clustering. 
+#' @field sampleFromPrior Sample from the priors for the multivariate normal
+#' density.
+#' @field calcBIC Calculate the BIC of the model.
+#' @field logLikelihood Calculate the likelihood of a given data point in each
+#' component. \itemize{
+#' \item Parameter: point - a data point.
+#' }
+NULL
+
+#' @name categoricalSampler
+#' @title Categorical mixture type
+#' @description The sampler for the Categorical mixture model.
+#' @field new Constructor \itemize{
+#' \item Parameter: K - the number of components to model
+#' \item Parameter: labels - the initial clustering of the data
+#' \item Parameter: concentration - the vector for the prior concentration of 
+#' the Dirichlet distribution of the component weights
+#' \item Parameter: X - the data to model
+#' }
+#' @field printType Print the sampler type called.
+#' @field updateWeights Update the weights of each component based on current 
+#' clustering.
+#' @field updateAllocation Sample a new clustering. 
+#' @field sampleFromPrior Sample from the priors for the Categorical density.
+#' @field calcBIC Calculate the BIC of the model.
+#' @field logLikelihood Calculate the likelihood of a given data point in each
+#' component. \itemize{
+#' \item Parameter: point - a data point.
+#' }
+NULL
+
+#' @name tAdjustedSampler
+#' @title Base class for adding a t-distribution to sweep up outliers in the 
+#' model.
+#' @description The class that the specific TAGM types inherit from. 
+#' @field new Constructor \itemize{
+#' \item Parameter: K - the number of components to model
+#' \item Parameter: labels - the initial clustering of the data
+#' \item Parameter: concentration - the vector for the prior concentration of 
+#' the Dirichlet distribution of the component weights
+#' \item Parameter: X - the data to model
+#' }
+#' @field updateOutlierWeights Updates the weight of the outlier component.
+#' @field updateWeights Update the weights of each component based on current 
+#' clustering, excluding the outliers.
+#' @field sampleOutlier Sample is the nth item is an outlier. \itemize{
+#' \item Parameter n: the index of the individual in the data matrix and 
+#' allocation vector.
+#' }
+#' @field updateAllocation Sample a new clustering and simultaneously allocate 
+#' items to the outlier distribution.
+#' @field calcTdistnLikelihood Virtual placeholder for the function that calculates 
+#' the likelihood of a given point in a t-distribution. \itemize{
+#' \item Parameter: point - a data point.
+#' }
+NULL
+
+#' @name tagmMVN
+#' @title T-ADjusted Gaussian Mixture (TAGM) type
+#' @description The sampler for the TAGM mixture model.
+#' @field new Constructor \itemize{
+#' \item Parameter: K - the number of components to model
+#' \item Parameter: labels - the initial clustering of the data
+#' \item Parameter: concentration - the vector for the prior concentration of 
+#' the Dirichlet distribution of the component weights
+#' \item Parameter: X - the data to model
+#' }
+#' @field printType Print the sampler type called.
+#' @field calcBIC Calculate the BIC of the model.
+#' @field calcTdistnLikelihood Calculate the likelihood of a given data point 
+#' the gloabl t-distirbution. \itemize{
+#' \item Parameter: point - a data point.
+#' }
+NULL
+
+#' @name tagmGaussian
+#' @title T-ADjusted Gaussian Mixture (TAGM) type
+#' @description The sampler for the TAGM mixture model with assumption of 
+#' independent features.
+#' @field new Constructor \itemize{
+#' \item Parameter: K - the number of components to model
+#' \item Parameter: labels - the initial clustering of the data
+#' \item Parameter: concentration - the vector for the prior concentration of 
+#' the Dirichlet distribution of the component weights
+#' \item Parameter: X - the data to model
+#' }
+#' @field printType Print the sampler type called.
+#' @field calcBIC Calculate the BIC of the model.
+#' @field calcTdistnLikelihood Calculate the likelihood of a given data point 
+#' the gloabl t-distribution. \itemize{
+#' \item Parameter: point - a data point.
+#' }
+NULL
+
+#' @name samplerFactory
+#' @title Factory for different sampler subtypes.
+#' @description The factory allows the type of mixture implemented to change 
+#' based upon the user input.
+#' @field new Constructor \itemize{
+#' \item Parameter: samplerType - the density type to be modelled
+#' \item Parameter: K - the number of components to model
+#' \item Parameter: labels - the initial clustering of the data
+#' \item Parameter: concentration - the vector for the prior concentration of 
+#' the Dirichlet distribution of the component weights
+#' \item Parameter: X - the data to model
+#' }
+NULL
+
 #' @title Mixture model
 #' @description Performs MCMC sampling for a mixture model.
 #' @param X The data matrix to perform clustering upon (items to cluster in rows).
