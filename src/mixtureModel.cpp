@@ -1,10 +1,9 @@
 # include <RcppArmadillo.h>
 # include <math.h> 
 # include <string>
-#include <memory>
-#include "RcppThread.h"
-// #include <iostream>
-// # include "CommonFunctions.h"
+# include <memory>
+# include "RcppThread.h"
+# include <iostream>
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
@@ -75,26 +74,26 @@ arma::mat calcSampleCov(arma::mat data,
 //' @field new Constructor \itemize{
 //' \item Parameter: K - the number of components to model
 //' \item Parameter: labels - the initial clustering of the data
-//' \item Parameter: concentration - the vector for the prior concentration of 
+//' \item Parameter: concentration - the vector for the prior concentration of
 //' the Dirichlet distribution of the component weights
 //' \item Parameter: X - the data to model
 //' }
 //' @field printType Print the sampler type called.
-//' @field updateWeights Update the weights of each component based on current 
+//' @field updateWeights Update the weights of each component based on current
 //' clustering.
-//' @field updateAllocation Sample a new clustering. 
-//' @field sampleFromPrior Virtual placeholder for sampling from the priors of 
+//' @field updateAllocation Sample a new clustering.
+//' @field sampleFromPrior Virtual placeholder for sampling from the priors of
 //' the specific mixtures.
-//' @field calcBIC Virtual placeholder for the function that calculates the BIC 
+//' @field calcBIC Virtual placeholder for the function that calculates the BIC
 //' of specific mixture models.
-//' @field logLikelihood Virtual placeholder for the function that calculates 
+//' @field logLikelihood Virtual placeholder for the function that calculates
 //' the likelihood of a given point in each component of specific mixture models.
 class sampler {
-  
+
 private:
   // virtual arma::vec logLikelihood(arma::vec x) { return 0.0; }
   // void updateAllocation() { return; }
-  
+
 public:
   arma::uword K, N, P, K_occ;
   double model_likelihood = 0.0, BIC = 0.0;
@@ -102,83 +101,83 @@ public:
   arma::vec concentration, w, ll, likelihood;
   arma::umat members;
   arma::mat X, alloc;
-  
+
   // Parametrised class
   sampler(
     arma::uword _K,
-    arma::uvec _labels, 
+    arma::uvec _labels,
     arma::vec _concentration,
-    arma::mat _X) 
+    arma::mat _X)
   {
-    
+
     K = _K;
     labels = _labels;
     concentration = _concentration;
     X = _X;
-    
+
     // Dimensions
     N = X.n_rows;
     P = X.n_cols;
-    
+
     // std::cout << "\nN: " << N << "\nP: " << P << "\n\n";
-    
+
     // Class populations
     N_k = arma::zeros<arma::uvec>(_K);
-    
+
     // Weights
     // double x, y;
     w = arma::zeros<arma::vec>(_K);
-    
+
     // for(arma::uword k = 0; k < K; k++){
     //   x = arma::randg(1, concentration(k));
     //   y = arma::randg(1, concentration(k));
     //   w(k) = (1 - sum(w)) * x/(x + y);
     // }
-    
+
     // Log likelihood (individual and model)
     ll = arma::zeros<arma::vec>(_K);
     likelihood = arma::zeros<arma::vec>(N);
-    
+
     // Class members
     members.set_size(N, _K);
     members.zeros();
-    
+
     // Allocation probability matrix (only makes sense in predictive models)
     alloc.set_size(N, _K);
     alloc.zeros();
   };
-  
+
   // Destructor
   virtual ~sampler() { };
-  
-  // Virtual functions are those that should actual point to the sub-class 
+
+  // Virtual functions are those that should actual point to the sub-class
   // version of the function.
   // Print the sampler type.
   virtual void printType() {
     std::cout << "\nType: NULL.\n";
   }
-  
+
   // Functions required of all mixture models
   virtual void updateWeights(){
-    
+
     double a = 0.0;
-    
+
     for (arma::uword k = 0; k < K; k++) {
-      
+
       // Find how many labels have the value
       members.col(k) = labels == k;
       N_k(k) = arma::sum(members.col(k));
-      
+
       // Update weights by sampling from a Gamma distribution
       a  = concentration(k) + N_k(k);
       w(k) = arma::randg( arma::distr_param(a, 1.0) );
     }
-    
-    // Convert the cluster weights (previously gamma distributed) to Beta 
+
+    // Convert the cluster weights (previously gamma distributed) to Beta
     // distributed by normalising
     w = w / arma::sum(w);
   };
-  
+
   virtual void updateAllocation() {
 
     double u = 0.0;
@@ -212,28 +211,28 @@ public:
     uniqueK = arma::unique(labels);
     K_occ = uniqueK.n_elem;
   };
-  
+
   // void predictLabel(arma::uword n, arma::vec ll) {
-  //   
+  //
   //   arma::uword u = 0;
   //   arma::vec comp_prob = ll + log(w);
-  //     
+  //
   //   // Normalise and overflow
   //   comp_prob = exp(comp_prob - max(comp_prob));
   //   comp_prob = comp_prob / sum(comp_prob);
-  //   
+  //
   //   // Prediction and update
   //   u = arma::randu<double>( );
   //   labels(n) = sum(u > cumsum(comp_prob));
   //   alloc.row(n) = comp_prob.t();
-  //   
+  //
   // };
-    
+
   virtual void sampleFromPriors() {};
   virtual void sampleParameters(){};
   virtual void calcBIC(){};
   virtual arma::vec logLikelihood(arma::vec x) { return arma::vec(); }
-  
+
 };
 
 //' @name gaussianSampler
@@ -337,7 +336,8 @@ public:
     std::cout << "\nType: Gaussian.\n";
   }
   
-  // Parameters for the mixture model
+  // Parameters for the mixture model. The priors are empirical and follow the
+  // suggestions of Richardson and Green <https://doi.org/10.1111/1467-9868.00095>.
   void sampleFromPriors() {
     for(arma::uword p = 0; p < P; p++){
       beta(p) = arma::randg<double>( arma::distr_param(g, 1.0 / h) );
@@ -751,6 +751,9 @@ public:
     
   };
   
+  // Destructor
+  virtual ~tAdjustedSampler() { };
+  
   virtual double calcTdistnLikelihood(arma::vec point) {
     
     double log_det = 0.0;
@@ -825,7 +828,7 @@ public:
     return sum(u > cumsum(outlier_prob));
   };
   
-  void updateAllocation() {
+  virtual void updateAllocation() {
     
     double u = 0.0;
     arma::uvec uniqueK;
@@ -963,6 +966,9 @@ public:
     outlier_weight = rBeta(b + u, N + v - b);
     
   };
+  
+  // Destructor
+  virtual ~tagmMVN() { };
   
   void printType() {
     std::cout << "Type: TAGM.\n";
@@ -1183,6 +1189,9 @@ public:
     
   };
   
+  // Destructor
+  virtual ~tagmGaussian() { };
+  
   void printType() {
     std::cout << "Type: TAGM (independent features).\n";
   }
@@ -1312,6 +1321,94 @@ public:
   
 };
 
+class semisupervisedSampler : public sampler {
+private:
+  
+public:
+  
+  arma::uword N_fixed = 0;
+  arma::uvec fixed, fixed_ind;
+  arma::mat X_unfixed;
+  
+  semisupervisedSampler(
+    arma::uword _K,
+    arma::uvec _labels, 
+    arma::vec _concentration,
+    arma::mat _X,
+    arma::uvec _fixed
+  ) : 
+  sampler(_K, _labels, _concentration, _X) {
+    
+    fixed = _fixed;
+    N_fixed = arma::sum(fixed);
+    fixed_ind = find(fixed == 0);
+    X_unfixed = X.elem( find(fixed == 0) );
+    
+  };
+  
+  // Destructor
+  virtual ~semisupervisedSampler() { };
+  
+  virtual void updateAllocation() {
+    
+    double u = 0.0;
+    arma::uvec uniqueK;
+    arma::vec comp_prob(K);
+    
+    for (auto& n : fixed_ind) {  
+    // for(arma::uword n = 0; n < N; n++){
+      
+      ll = logLikelihood(X.row(n).t());
+      
+      // Update with weights
+      comp_prob = ll + log(w);
+      
+      // Normalise and overflow
+      comp_prob = exp(comp_prob - max(comp_prob));
+      comp_prob = comp_prob / sum(comp_prob);
+      
+      // Prediction and update
+      u = arma::randu<double>( );
+      labels(n) = sum(u > cumsum(comp_prob));
+      alloc.row(n) = comp_prob.t();
+      
+      // Record the likelihood of the item in it's allocated component
+      likelihood(n) = ll(labels(n));
+    }
+    
+    // The model log likelihood
+    model_likelihood = arma::accu(likelihood);
+    
+    // Number of occupied components (used in BIC calculation)
+    uniqueK = arma::unique(labels);
+    K_occ = uniqueK.n_elem;
+  };
+  
+};
+
+
+class mvnPredictive : public mvnSampler, public semisupervisedSampler {
+  
+private:
+  
+public:
+  
+  mvnPredictive(
+    arma::uword _K,
+    arma::uvec _labels, 
+    arma::vec _concentration,
+    arma::mat _X,
+    arma::uvec _fixed
+  ) : mvnSampler(_K, _labels, _concentration, _X), 
+  semisupervisedSampler(_K, _labels, _concentration, _X, _fixed),
+  sampler(_K, _labels, _concentration, _X) {
+    
+  };
+  
+  virtual ~mvnPredictive() { };
+  
+};
+
 // Factory for creating instances of samplers
 //' @name samplerFactory
 //' @title Factory for different sampler subtypes.
@@ -1352,6 +1449,50 @@ class samplerFactory
     
   }
 
+};
+
+
+// Factory for creating instances of samplers
+//' @name samplerFactory
+//' @title Factory for different sampler subtypes.
+//' @description The factory allows the type of mixture implemented to change 
+//' based upon the user input.
+//' @field new Constructor \itemize{
+//' \item Parameter: samplerType - the density type to be modelled
+//' \item Parameter: K - the number of components to model
+//' \item Parameter: labels - the initial clustering of the data
+//' \item Parameter: concentration - the vector for the prior concentration of 
+//' the Dirichlet distribution of the component weights
+//' \item Parameter: X - the data to model
+//' }
+class semisupervisedSamplerFactory
+{
+public:
+  enum samplerType {
+    // G = 0,
+    MVN = 1 //,
+    // C = 2,
+    // TMVN = 3,
+    // TG = 4
+  };
+  
+  static std::unique_ptr<semisupervisedSampler> createSemisupervisedSampler(samplerType type,
+                                                arma::uword K,
+                                                arma::uvec labels,
+                                                arma::vec concentration,
+                                                arma::mat X,
+                                                arma::uvec fixed) {
+    switch (type) {
+    // case G: return std::make_unique<gaussianSampler>(K, labels, concentration, X, fixed);
+    case MVN: return std::make_unique<mvnPredictive>(K, labels, concentration, X, fixed);
+    // case C: return std::make_unique<categoricalSampler>(K, labels, concentration, X, fixed);
+    // case TMVN: return std::make_unique<tagmMVN>(K, labels, concentration, X, fixed);
+    // case TG: return std::make_unique<tagmGaussian>(K, labels, concentration, X, fixed);
+    default: throw "invalid sampler type.";
+    }
+    
+  }
+  
 };
 
 //' @title Mixture model
@@ -1419,6 +1560,83 @@ Rcpp::List sampleMixtureModel (
       sampler_ptr->calcBIC();
       BIC_record( save_int ) = sampler_ptr->BIC; 
 
+      // Save the current clustering
+      class_record.row( save_int ) = sampler_ptr->labels.t();
+      save_int++;
+    }
+  }
+  return(List::create(Named("samples") = class_record, Named("BIC") = BIC_record));
+};
+
+
+//' @title Mixture model
+//' @description Performs MCMC sampling for a mixture model.
+//' @param X The data matrix to perform clustering upon (items to cluster in rows).
+//' @param K The number of components to model (upper limit on the number of clusters found).
+//' @param labels Vector item labels to initialise from.
+//' @param fixed Binary vector of the items that are fixed in their initial label.
+//' @param dataType Int, 0: independent Gaussians, 1: Multivariate normal, or 2: Categorical distributions.
+//' @param R The number of iterations to run for.
+//' @param thin thinning factor for samples recorded.
+//' @param concentration Vector of concentrations for mixture weights (recommended to be symmetric).
+//' @return Named list of the matrix of MCMC samples generated (each row 
+//' corresponds to a different sample) and BIC for each saved iteration.
+// [[Rcpp::export]]
+Rcpp::List sampleSemisupervisedMixtureModel (
+    arma::mat X,
+    arma::uword K,
+    arma::uvec labels,
+    arma::uvec fixed,
+    int dataType,
+    arma::uword R,
+    arma::uword thin,
+    arma::vec concentration,
+    arma::uword seed
+) {
+  
+  // Set the random number
+  std::default_random_engine generator(seed);
+  
+  // Declare the factory
+  semisupervisedSamplerFactory my_factory;
+  
+  // Convert from an int to the samplerType variable for our Factory
+  semisupervisedSamplerFactory::samplerType val = static_cast<semisupervisedSamplerFactory::samplerType>(dataType);
+  
+  // Make a pointer to the correct type of sampler
+  std::unique_ptr<sampler> sampler_ptr = my_factory.createSemisupervisedSampler(val,
+                                                                  K,
+                                                                  labels,
+                                                                  concentration,
+                                                                  X,
+                                                                  fixed);
+  
+  // The output matrix
+  arma::umat class_record(floor(R / thin), X.n_rows);
+  class_record.zeros();
+  
+  // We save the BIC at each iteration
+  arma::vec BIC_record = arma::zeros<arma::vec>(floor(R / thin));
+  
+  arma::uword save_int=0;
+  
+  // Sampler from priors (this is unnecessary)
+  sampler_ptr->sampleFromPriors();
+  
+  // Iterate over MCMC moves
+  for(arma::uword r = 0; r < R; r++){
+    
+    sampler_ptr->updateWeights();
+    sampler_ptr->sampleParameters();
+    sampler_ptr->updateAllocation();
+    
+    // Record results
+    if((r + 1) % thin == 0){
+      
+      // Update the BIC for the current model fit
+      sampler_ptr->calcBIC();
+      BIC_record( save_int ) = sampler_ptr->BIC; 
+      
       // Save the current clustering
       class_record.row( save_int ) = sampler_ptr->labels.t();
       save_int++;
