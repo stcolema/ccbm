@@ -28,7 +28,7 @@ consensusClustering <- function(X, S, R,
                                 initial_labels = NULL,
                                 K_max = 50,
                                 alpha = 1,
-                                dataType = "G") {
+                                dataType = 0) {
   if (is.null(initial_labels)) {
     initial_labels <- priorLabels(alpha, K_max, nrow(X))
   }

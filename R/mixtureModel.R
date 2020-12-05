@@ -1,7 +1,6 @@
 #!/usr/bin/Rscript
-#' @title Gaussian mixture model
-#' @description A Bayesian mixture model using independent Gaussians. The priors
-#' are empirical and follow the suggestions of Richardson and Green <https://doi.org/10.1111/1467-9868.00095>.
+#' @title Mixture model
+#' @description A Bayesian mixture model.
 #' @param X Data to cluster as a matrix (items to cluster in rows).
 #' @param R The number of iterations in the sampler.
 #' @param thin The factor by which the samples generated are thinned, e.g. ig ``thin=50`` only every 50th sample is kept.
@@ -25,7 +24,7 @@
 #' pred_cl <- mcclust::maxpear(samples$samples)
 #' psm <- createSimilarityMatrix(pred_cl)
 #' @export
-gaussianMixtureModel <- function(X, R, thin,
+mixtureModel <- function(X, R, thin,
                                  initial_labels = NULL,
                                  K_max = 50,
                                  alpha = 1,

@@ -35,7 +35,7 @@
 #' @export
 bayesMclust <- function(X, R, thin, K,
                         alpha = 1,
-                        dataType = "G",
+                        dataType = 0,
                         method = "complete",
                         metric = "euclidean") {
 

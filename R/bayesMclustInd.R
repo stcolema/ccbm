@@ -31,7 +31,7 @@
 bayesMclustInd <- function(X, R, thin,
                            K_max = 50,
                            alpha = 1,
-                           dataType = "G",
+                           dataType = 0,
                            method = "complete",
                            metric = "euclidean",
                            seed = sample.int(.Machine$integer.max, 1)) {
@@ -40,7 +40,7 @@ bayesMclustInd <- function(X, R, thin,
   hc <- hclust(dist(X, method = metric), method = method)
   intial_labels <- cutree(hc, k = K_max)
 
-  samples <- gaussianMixtureModel(X, R, thin, intial_labels, K_max, alpha, dataType, seed)
+  samples <- mixtureModel(X, R, thin, intial_labels, K_max, alpha, dataType, seed)
 
   samples
 }

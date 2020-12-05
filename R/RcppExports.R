@@ -53,19 +53,19 @@ NULL
 #' @field new Constructor \itemize{
 #' \item Parameter: K - the number of components to model
 #' \item Parameter: labels - the initial clustering of the data
-#' \item Parameter: concentration - the vector for the prior concentration of 
+#' \item Parameter: concentration - the vector for the prior concentration of
 #' the Dirichlet distribution of the component weights
 #' \item Parameter: X - the data to model
 #' }
 #' @field printType Print the sampler type called.
-#' @field updateWeights Update the weights of each component based on current 
+#' @field updateWeights Update the weights of each component based on current
 #' clustering.
-#' @field updateAllocation Sample a new clustering. 
-#' @field sampleFromPrior Virtual placeholder for sampling from the priors of 
+#' @field updateAllocation Sample a new clustering.
+#' @field sampleFromPrior Virtual placeholder for sampling from the priors of
 #' the specific mixtures.
-#' @field calcBIC Virtual placeholder for the function that calculates the BIC 
+#' @field calcBIC Virtual placeholder for the function that calculates the BIC
 #' of specific mixture models.
-#' @field logLikelihood Virtual placeholder for the function that calculates 
+#' @field logLikelihood Virtual placeholder for the function that calculates
 #' the likelihood of a given point in each component of specific mixture models.
 NULL
 
@@ -215,6 +215,20 @@ NULL
 #' }
 NULL
 
+#' @name samplerFactory
+#' @title Factory for different sampler subtypes.
+#' @description The factory allows the type of mixture implemented to change 
+#' based upon the user input.
+#' @field new Constructor \itemize{
+#' \item Parameter: samplerType - the density type to be modelled
+#' \item Parameter: K - the number of components to model
+#' \item Parameter: labels - the initial clustering of the data
+#' \item Parameter: concentration - the vector for the prior concentration of 
+#' the Dirichlet distribution of the component weights
+#' \item Parameter: X - the data to model
+#' }
+NULL
+
 #' @title Mixture model
 #' @description Performs MCMC sampling for a mixture model.
 #' @param X The data matrix to perform clustering upon (items to cluster in rows).
@@ -228,5 +242,21 @@ NULL
 #' corresponds to a different sample) and BIC for each saved iteration.
 sampleMixtureModel <- function(X, K, labels, dataType, R, thin, concentration, seed) {
     .Call(`_ccbm_sampleMixtureModel`, X, K, labels, dataType, R, thin, concentration, seed)
+}
+
+#' @title Mixture model
+#' @description Performs MCMC sampling for a mixture model.
+#' @param X The data matrix to perform clustering upon (items to cluster in rows).
+#' @param K The number of components to model (upper limit on the number of clusters found).
+#' @param labels Vector item labels to initialise from.
+#' @param fixed Binary vector of the items that are fixed in their initial label.
+#' @param dataType Int, 0: independent Gaussians, 1: Multivariate normal, or 2: Categorical distributions.
+#' @param R The number of iterations to run for.
+#' @param thin thinning factor for samples recorded.
+#' @param concentration Vector of concentrations for mixture weights (recommended to be symmetric).
+#' @return Named list of the matrix of MCMC samples generated (each row 
+#' corresponds to a different sample) and BIC for each saved iteration.
+sampleSemisupervisedMixtureModel <- function(X, K, labels, fixed, dataType, R, thin, concentration, seed) {
+    .Call(`_ccbm_sampleSemisupervisedMixtureModel`, X, K, labels, fixed, dataType, R, thin, concentration, seed)
 }
 
