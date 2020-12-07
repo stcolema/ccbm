@@ -173,6 +173,8 @@ public:
       w(k) = arma::randg( arma::distr_param(a, 1.0) );
     }
 
+    // std::cout << "N_k: \n" << N_k << "\n\n";
+    
     // Convert the cluster weights (previously gamma distributed) to Beta
     // distributed by normalising
     w = w / arma::sum(w);
@@ -479,7 +481,7 @@ public:
     
     arma::mat mean_mat = arma::mean(_X, 0).t();
     xi = mean_mat.col(0);
-    
+
     arma::mat scale_param = _X.each_row() - xi.t();
     arma::rowvec diag_entries = arma::sum(scale_param % scale_param, 0) / N * pow(_K, 1.0 / (double)P);
     scale = arma::diagmat( diag_entries );
@@ -515,6 +517,10 @@ public:
     arma::vec mu_k(P), sample_mean(P);
     arma::mat sample_cov(P, P), dist_from_prior(P, P), scale_n(P, P);
     
+    // std::cout << "\nComponent means:\n" <<  mu << "\n\n";
+    
+    // std::cout << "Members:\n" << members << "\n\n";
+    
     for (arma::uword k = 0; k < K; k++) {
       
       // Find how many labels have the value
@@ -523,12 +529,14 @@ public:
         
         // Component data
         arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
+        // std::cout << "\n\nComponent data:\n" << component_data << "\n\n";
         
         // Sample mean in the component data
         sample_mean = arma::mean(component_data).t();
+        // std::cout << "\n\nComponent mean:\n" << sample_mean << "\n\n";
         
         // The weighted average of the prior mean and sample mean
-        mu_k = (kappa * xi + n_k * sample_mean) / (double)(kappa + N);
+        mu_k = (kappa * xi + n_k * sample_mean) / (double)(kappa + n_k);
         
         sample_cov = calcSampleCov(component_data, sample_mean, n_k, P);
         
@@ -536,11 +544,11 @@ public:
         dist_from_prior = (sample_mean - xi) * (sample_mean - xi).t();
         
         // Update the scale hyperparameter
-        scale_n = scale + sample_cov + ((kappa * N) / (double)(kappa + N)) * dist_from_prior;
+        scale_n = scale + sample_cov + ((kappa * n_k) / (double)(kappa + n_k)) * dist_from_prior;
         
         cov.slice(k) = arma::iwishrnd(scale_n, nu + n_k);
         
-        mu.col(k) = arma::mvnrnd(mu_k, (1.0/kappa) * cov.slice(k), 1);
+        mu.col(k) = arma::mvnrnd(mu_k, (1.0/(kappa + n_k)) * cov.slice(k), 1);
         
       } else{
         
@@ -733,6 +741,8 @@ public:
   arma::vec global_mean;
   arma::mat global_cov;
   double df = 4.0, u = 2.0, v = 10.0, b = 0.0, outlier_weight = 0.0;
+  
+  using sampler::sampler;
   
   tAdjustedSampler(arma::uword _K,
           arma::uvec _labels, 
@@ -947,6 +957,8 @@ public:
   // arma::vec global_mean;
   // arma::mat global_cov;
   // double df = 4.0, u = 2.0, v = 10.0, b = 0.0, outlier_weight = 0.0;
+  
+  using tAdjustedSampler::tAdjustedSampler;
   
   tagmMVN(arma::uword _K,
           arma::uvec _labels, 
@@ -1169,6 +1181,8 @@ public:
   // arma::mat global_cov;
   // double df = 4.0, u = 2.0, v = 10.0, b = 0.0, outlier_weight = 0.0;
   
+  using tAdjustedSampler::tAdjustedSampler;
+  
   tagmGaussian(
     arma::uword _K,
     arma::uvec _labels, 
@@ -1321,14 +1335,16 @@ public:
   
 };
 
-class semisupervisedSampler : public sampler {
+class semisupervisedSampler : public virtual sampler {
 private:
   
 public:
   
   arma::uword N_fixed = 0;
-  arma::uvec fixed, fixed_ind;
+  arma::uvec fixed, unfixed_ind;
   arma::mat X_unfixed;
+  
+  using sampler::sampler;
   
   semisupervisedSampler(
     arma::uword _K,
@@ -1341,7 +1357,7 @@ public:
     
     fixed = _fixed;
     N_fixed = arma::sum(fixed);
-    fixed_ind = find(fixed == 0);
+    unfixed_ind = find(fixed == 0);
     X_unfixed = X.elem( find(fixed == 0) );
     
   };
@@ -1349,14 +1365,109 @@ public:
   // Destructor
   virtual ~semisupervisedSampler() { };
   
+  void updateAllocation() {
+    
+    double u = 0.0;
+    arma::uvec uniqueK;
+    arma::vec comp_prob(K);
+    
+    for (auto& n : unfixed_ind) {
+    // for(arma::uword n = 0; n < N; n++){
+      
+      ll = logLikelihood(X.row(n).t());
+      
+      // if(fixed(n) == 0) {
+      
+      // Update with weights
+      comp_prob = ll + log(w);
+      
+      // Normalise and overflow
+      comp_prob = exp(comp_prob - max(comp_prob));
+      comp_prob = comp_prob / sum(comp_prob);
+      
+      // Prediction and update
+      u = arma::randu<double>( );
+      labels(n) = sum(u > cumsum(comp_prob));
+      alloc.row(n) = comp_prob.t();
+      // }
+      
+      // Record the likelihood of the item in it's allocated component
+      likelihood(n) = ll(labels(n));
+    }
+    
+    // The model log likelihood
+    model_likelihood = arma::accu(likelihood);
+    
+    // Number of occupied components (used in BIC calculation)
+    uniqueK = arma::unique(labels);
+    K_occ = uniqueK.n_elem;
+  };
+  
+};
+
+
+class mvnPredictive : public semisupervisedSampler, public mvnSampler {
+  
+private:
+  
+public:
+  
+  using mvnSampler::mvnSampler;
+  
+  mvnPredictive(
+    arma::uword _K,
+    arma::uvec _labels, 
+    arma::vec _concentration,
+    arma::mat _X,
+    arma::uvec _fixed
+  ) : 
+  semisupervisedSampler(_K, _labels, _concentration, _X, _fixed),
+  mvnSampler(_K, _labels, _concentration, _X),
+  sampler(_K, _labels, _concentration, _X) {
+    
+    
+  };
+  
+  virtual ~mvnPredictive() { };
+  
+};
+
+
+class tagmPredictive : public mvnPredictive, public tAdjustedSampler {
+  
+private:
+  
+public:
+  
+  using mvnPredictive::mvnPredictive;
+  
+  tagmPredictive(
+    arma::uword _K,
+    arma::uvec _labels, 
+    arma::vec _concentration,
+    arma::mat _X,
+    arma::uvec _fixed
+  ) : 
+    mvnPredictive(_K, _labels, _concentration, _X, _fixed),
+    tAdjustedSampler(_K, _labels, _concentration, _X),
+    sampler(_K, _labels, _concentration, _X) {
+    
+    outlier = arma::ones<arma::uvec>(N) - fixed;
+    
+  };
+  
+  virtual ~tagmPredictive() { };
+  
   virtual void updateAllocation() {
     
     double u = 0.0;
     arma::uvec uniqueK;
     arma::vec comp_prob(K);
     
-    for (auto& n : fixed_ind) {  
-    // for(arma::uword n = 0; n < N; n++){
+    // First update the outlier parameters
+    updateOutlierWeights();
+    
+    for (auto& n : unfixed_ind) {
       
       ll = logLikelihood(X.row(n).t());
       
@@ -1374,6 +1485,9 @@ public:
       
       // Record the likelihood of the item in it's allocated component
       likelihood(n) = ll(labels(n));
+      
+      // Update if the point is an outlier or not
+      outlier(n) = sampleOutlier(n);
     }
     
     // The model log likelihood
@@ -1384,28 +1498,12 @@ public:
     K_occ = uniqueK.n_elem;
   };
   
-};
-
-
-class mvnPredictive : public mvnSampler, public semisupervisedSampler {
-  
-private:
-  
-public:
-  
-  mvnPredictive(
-    arma::uword _K,
-    arma::uvec _labels, 
-    arma::vec _concentration,
-    arma::mat _X,
-    arma::uvec _fixed
-  ) : mvnSampler(_K, _labels, _concentration, _X), 
-  semisupervisedSampler(_K, _labels, _concentration, _X, _fixed),
-  sampler(_K, _labels, _concentration, _X) {
+  void calcBIC(){
+    
+    arma::uword n_param = (P + P * (P + 1) * 0.5) * (K_occ + 1);
+    BIC = n_param * std::log(N) - 2 * model_likelihood;
     
   };
-  
-  virtual ~mvnPredictive() { };
   
 };
 
@@ -1470,9 +1568,9 @@ class semisupervisedSamplerFactory
 public:
   enum samplerType {
     // G = 0,
-    MVN = 1 //,
+    MVN = 1,
     // C = 2,
-    // TMVN = 3,
+    TMVN = 3
     // TG = 4
   };
   
@@ -1486,7 +1584,7 @@ public:
     // case G: return std::make_unique<gaussianSampler>(K, labels, concentration, X, fixed);
     case MVN: return std::make_unique<mvnPredictive>(K, labels, concentration, X, fixed);
     // case C: return std::make_unique<categoricalSampler>(K, labels, concentration, X, fixed);
-    // case TMVN: return std::make_unique<tagmMVN>(K, labels, concentration, X, fixed);
+    case TMVN: return std::make_unique<tagmPredictive>(K, labels, concentration, X, fixed);
     // case TG: return std::make_unique<tagmGaussian>(K, labels, concentration, X, fixed);
     default: throw "invalid sampler type.";
     }

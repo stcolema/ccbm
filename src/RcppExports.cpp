@@ -35,10 +35,30 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sampleSemisupervisedMixtureModel
+Rcpp::List sampleSemisupervisedMixtureModel(arma::mat X, arma::uword K, arma::uvec labels, arma::uvec fixed, int dataType, arma::uword R, arma::uword thin, arma::vec concentration, arma::uword seed);
+RcppExport SEXP _ccbm_sampleSemisupervisedMixtureModel(SEXP XSEXP, SEXP KSEXP, SEXP labelsSEXP, SEXP fixedSEXP, SEXP dataTypeSEXP, SEXP RSEXP, SEXP thinSEXP, SEXP concentrationSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type K(KSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type labels(labelsSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type fixed(fixedSEXP);
+    Rcpp::traits::input_parameter< int >::type dataType(dataTypeSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type R(RSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type thin(thinSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type concentration(concentrationSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(sampleSemisupervisedMixtureModel(X, K, labels, fixed, dataType, R, thin, concentration, seed));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ccbm_createSimilarityMat", (DL_FUNC) &_ccbm_createSimilarityMat, 1},
     {"_ccbm_sampleMixtureModel", (DL_FUNC) &_ccbm_sampleMixtureModel, 8},
+    {"_ccbm_sampleSemisupervisedMixtureModel", (DL_FUNC) &_ccbm_sampleSemisupervisedMixtureModel, 9},
     {NULL, NULL, 0}
 };
 
