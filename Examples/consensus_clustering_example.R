@@ -3,9 +3,9 @@
 # Example of consensus clustering of Bayesian mixture models applied to
 # simulated data.
 
-# Library setup
-library(ccbm)
-library(mdiHelpR)
+# Library set-up
+library(ccbm) # devtools::install_github("stcolema/ccbm")
+library(mdiHelpR) # devtools::install_github("stcolema/mdiHelpR")
 library(magrittr)
 library(doRNG)
 
