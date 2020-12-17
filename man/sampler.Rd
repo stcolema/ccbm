@@ -13,25 +13,25 @@ the generic mixture type.
 \item{\code{new}}{Constructor \itemize{
 \item Parameter: K - the number of components to model
 \item Parameter: labels - the initial clustering of the data
-\item Parameter: concentration - the vector for the prior concentration of 
+\item Parameter: concentration - the vector for the prior concentration of
 the Dirichlet distribution of the component weights
 \item Parameter: X - the data to model
 }}
 
 \item{\code{printType}}{Print the sampler type called.}
 
-\item{\code{updateWeights}}{Update the weights of each component based on current 
+\item{\code{updateWeights}}{Update the weights of each component based on current
 clustering.}
 
 \item{\code{updateAllocation}}{Sample a new clustering.}
 
-\item{\code{sampleFromPrior}}{Virtual placeholder for sampling from the priors of 
+\item{\code{sampleFromPrior}}{Virtual placeholder for sampling from the priors of
 the specific mixtures.}
 
-\item{\code{calcBIC}}{Virtual placeholder for the function that calculates the BIC 
+\item{\code{calcBIC}}{Virtual placeholder for the function that calculates the BIC
 of specific mixture models.}
 
-\item{\code{logLikelihood}}{Virtual placeholder for the function that calculates 
+\item{\code{logLikelihood}}{Virtual placeholder for the function that calculates
 the likelihood of a given point in each component of specific mixture models.}
 }}
 

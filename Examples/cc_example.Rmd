@@ -1,0 +1,54 @@
+---
+title: "Consensus clustering for Bayesian mixture models"
+author: "Stephen Coleman"
+date: "17/12/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This document describes applying consensus clustering to Bayesian mixture models, with an example applied to some simulated data.
+
+```{r data}
+library(ccbm)
+library(mdiHelpR)
+library(magrittr)
+library(doFuture)
+
+# Set a seed fro reproducibility
+set.seed(1)
+setMyTheme()
+
+# Plan for parallelisation using the DoFuture package
+registerDoFuture()
+plan(multiprocess)
+
+# Parameters of the simulated data
+N <- 200
+P <- 20
+K <- 5
+my_data <- generateSimulationDataset(K, N, P)
+
+# Look at the data
+annotatedHeatmap(my_data$data, my_data$cluster_IDs)
+
+```
+
+Having simulated some data, we now apply consensus clustering.
+
+```{r cc}
+
+D <- 100
+W <- 100
+
+my_samples <- consensusClustering(my_data$data, W, D, dataType = 0)
+
+my_samples
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

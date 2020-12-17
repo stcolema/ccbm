@@ -57,10 +57,10 @@ arma::mat calcSampleCov(arma::mat data,
 ) {
   
   arma::mat sample_covariance = arma::zeros<arma::mat>(P, P);
-  // sample_covariance.zeros();
   
-  // If n > 0 (as this would crash for empty clusters)
-  if(N > 0){
+  // If n > 0 (as this would crash for empty clusters), and for n = 1 the 
+  // sample covariance is 0
+  if(N > 1){
     data.each_row() -= arma::trans(sample_mean);
     sample_covariance = arma::trans(data) * data;
   }
@@ -379,7 +379,7 @@ public:
       n_k = N_k(k);
       if(n_k > 0){
         
-        arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
+        arma::mat component_data = X.rows( arma::find(labels == k) );
         
         for (arma::uword p = 0; p < P; p++){
           
@@ -482,8 +482,8 @@ public:
     arma::mat mean_mat = arma::mean(_X, 0).t();
     xi = mean_mat.col(0);
 
-    arma::mat scale_param = _X.each_row() - xi.t();
-    arma::rowvec diag_entries = arma::sum(scale_param % scale_param, 0) / N * pow(_K, 1.0 / (double)P);
+    arma::mat scale_param = _X.each_row() - xi.t(); 
+    arma::rowvec diag_entries = arma::sum(scale_param % scale_param, 0) / (N * pow(_K, 1.0 / (double)P));
     scale = arma::diagmat( diag_entries );
     
     // Set the size of the objects to hold the component specific parameters
@@ -504,6 +504,7 @@ public:
   }
   
   void sampleFromPriors() {
+    
     for(arma::uword k = 0; k < K; k++){
       cov.slice(k) = arma::iwishrnd(scale, nu);
       mu.col(k) = arma::mvnrnd(xi, (1.0/kappa) * cov.slice(k), 1);
@@ -517,10 +518,6 @@ public:
     arma::vec mu_k(P), sample_mean(P);
     arma::mat sample_cov(P, P), dist_from_prior(P, P), scale_n(P, P);
     
-    // std::cout << "\nComponent means:\n" <<  mu << "\n\n";
-    
-    // std::cout << "Members:\n" << members << "\n\n";
-    
     for (arma::uword k = 0; k < K; k++) {
       
       // Find how many labels have the value
@@ -528,16 +525,14 @@ public:
       if(n_k > 0){
         
         // Component data
-        arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
-        // std::cout << "\n\nComponent data:\n" << component_data << "\n\n";
-        
+        arma::mat component_data = X.rows( arma::find(labels == k) );
+
         // Sample mean in the component data
         sample_mean = arma::mean(component_data).t();
-        // std::cout << "\n\nComponent mean:\n" << sample_mean << "\n\n";
-        
+
         // The weighted average of the prior mean and sample mean
         mu_k = (kappa * xi + n_k * sample_mean) / (double)(kappa + n_k);
-        
+
         sample_cov = calcSampleCov(component_data, sample_mean, n_k, P);
         
         // Calculate the distance of the sample mean from the prior
@@ -548,12 +543,12 @@ public:
         
         cov.slice(k) = arma::iwishrnd(scale_n, nu + n_k);
         
-        mu.col(k) = arma::mvnrnd(mu_k, (1.0/(kappa + n_k)) * cov.slice(k), 1);
+        mu.col(k) = arma::mvnrnd(mu_k, (1.0 / (double) (kappa + n_k)) * cov.slice(k), 1);
         
       } else{
         
         cov.slice(k) = arma::iwishrnd(scale, nu);
-        mu.col(k) = arma::mvnrnd(xi, (1.0/kappa) * cov.slice(k), 1);
+        mu.col(k) = arma::mvnrnd(xi, (1.0 / kappa) * cov.slice(k), 1);
         
       }
       
@@ -667,7 +662,7 @@ public:
       n_k = N_k(k);
       if(n_k > 0){
 
-        arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
+        arma::mat component_data = X.rows( arma::find(labels == k) );
         component_column_prop = arma::sum(component_data) / n_k;
         
         for(arma::uword p = 0; p < P; p++){
@@ -892,7 +887,7 @@ public:
   //     if(n_k > 0){
   //       
   //       // Component data
-  //       arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
+  //       arma::mat component_data = X.rows( arma::find(labels == k) );
   //       
   //       // Sample mean in the component data
   //       sample_mean = arma::mean(component_data).t();
@@ -1114,7 +1109,7 @@ public:
   //     if(n_k > 0){
   //       
   //       // Component data
-  //       arma::mat component_data = X.rows( arma::find(members.col(k) == 1) );
+  //       arma::mat component_data = X.rows( arma::find(labels == k) );
   //       
   //       // Sample mean in the component data
   //       sample_mean = arma::mean(component_data).t();

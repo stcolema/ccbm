@@ -2,8 +2,8 @@
 #' @title Consensus clustering
 #' @description Consensus clustering of Gaussian mixture models.
 #' @param X Data to cluster as a matrix (items to cluster in rows).
-#' @param S The size of the ensemble.
-#' @param R The chain depth in each learner.
+#' @param W The width of the ensemble.
+#' @param D The chain depth in each learner.
 #' @param initial_labels Labels to begin from (if ``NULL`` defaults to a stick-breaking prior).
 #' @param K_max The number of components to include (the upper bound on the number of clusters found).
 #' @param alpha The concentration parameter for the stick-breaking prior and the weights in the model.
@@ -13,8 +13,8 @@
 #' X <- as.matrix(my_data)
 #'
 #' # Ensemble parameters
-#' S <- 100
-#' R <- 100
+#' D <- 100
+#' W <- 100
 #'
 #' # Samples from each model
 #' samples <- consensusClustering(X, S, R)
@@ -24,7 +24,7 @@
 #' cm <- createSimilarityMatrix(pred_cl)
 #' @importFrom foreach foreach
 #' @export
-consensusClustering <- function(X, S, R,
+consensusClustering <- function(X, D, W,
                                 initial_labels = NULL,
                                 K_max = 50,
                                 alpha = 1,
@@ -34,22 +34,24 @@ consensusClustering <- function(X, S, R,
   }
 
   samples <- foreach::foreach(
-    s = 1:S,
-    .export = c("X", "initial_labels", "R", "K_max", "alpha", "dataType"),
+    d = 1:D,
+    .export = c("X", "initial_labels", "D", "K_max", "alpha", "dataType"),
     .packages = c("ccbm", "Rcpp")
-  ) %dopar% {
-    mixtureModel(
+  ) %dorng% {
+    sampleMixtureModel(
       X,
       K_max,
       initial_labels,
       dataType,
-      R,
-      R,
+      W,
+      W,
       rep(alpha, K_max),
-      s
+      d
     )$samples
   }
 
-  cl_samples <- matrix(unlist(samples), nrow = S, byrow = T)
+  cl_samples <- matrix(unlist(samples), nrow = D, byrow = T)
+  colnames(cl_samples) <- row.names(X)
+  
   cl_samples
 }

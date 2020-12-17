@@ -6,20 +6,20 @@
 \usage{
 consensusClustering(
   X,
-  S,
-  R,
+  D,
+  W,
   initial_labels = NULL,
   K_max = 50,
   alpha = 1,
-  dataType = "G"
+  dataType = 0
 )
 }
 \arguments{
 \item{X}{Data to cluster as a matrix (items to cluster in rows).}
 
-\item{S}{The size of the ensemble.}
+\item{D}{The chain depth in each learner.}
 
-\item{R}{The chain depth in each learner.}
+\item{W}{The width of the ensemble.}
 
 \item{initial_labels}{Labels to begin from (if ``NULL`` defaults to a stick-breaking prior).}
 
@@ -38,8 +38,8 @@ Consensus clustering of Gaussian mixture models.
 X <- as.matrix(my_data)
 
 # Ensemble parameters
-S <- 100
-R <- 100
+D <- 100
+W <- 100
 
 # Samples from each model
 samples <- consensusClustering(X, S, R)
