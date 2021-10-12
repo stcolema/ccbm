@@ -7,6 +7,7 @@
 #' @param initial_labels Labels to begin from (if ``NULL`` defaults to a stick-breaking prior).
 #' @param K_max The number of components to include (the upper bound on the number of clusters found).
 #' @param alpha The concentration parameter for the stick-breaking prior and the weights in the model.
+#' @param anchor_seed The value added to the looped over seeds (this allows some differentiation between runs).
 #' @return matrix of samples generated from each learner (each row corresponds to a different sample).
 #' @examples
 #' # Convert data to matrix format
@@ -28,7 +29,8 @@ consensusClustering <- function(X, D, W,
                                 initial_labels = NULL,
                                 K_max = 50,
                                 alpha = 1,
-                                dataType = 0) {
+                                dataType = 0,
+                                anchor_seed = 0) {
   if (is.null(initial_labels)) {
     initial_labels <- priorLabels(alpha, K_max, nrow(X))
   }
@@ -38,7 +40,7 @@ consensusClustering <- function(X, D, W,
     .export = c("X", "initial_labels", "D", "K_max", "alpha", "dataType"),
     .packages = c("ccbm", "Rcpp")
   ) %dorng% {
-    set.seed(d)
+    set.seed(d + anchor_seed)
     sampleMixtureModel(
       X,
       K_max,
