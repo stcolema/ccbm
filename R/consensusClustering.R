@@ -38,6 +38,7 @@ consensusClustering <- function(X, D, W,
     .export = c("X", "initial_labels", "D", "K_max", "alpha", "dataType"),
     .packages = c("ccbm", "Rcpp")
   ) %dorng% {
+    set.seed(d)
     sampleMixtureModel(
       X,
       K_max,
