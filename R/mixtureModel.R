@@ -13,7 +13,12 @@
 #' corresponds to a different sample) and BIC for each saved iteration.
 #' @examples
 #' # Convert data to matrix format
-#' X <- as.matrix(my_data)
+#' X <-  matrix(c(rnorm(100, mean = 2, sd = 1.25), 
+#'   rnorm(100, mean = -2, sd = 1.25)
+#'   ), 
+#'   ncol = 2,
+#'   byrow = T
+#' )
 #'
 #' # Sampling parameters
 #' R <- 1000
@@ -39,9 +44,7 @@ mixtureModel <- function(X, R, thin,
 
   # Check that the initial labels starts at 0, if not remedy this.
   if (!any(initial_labels == 0)) {
-    initial_labels <- initial_labels %>%
-      as.factor() %>%
-      as.numeric() - 1
+    initial_labels <- as.numeric(as.factor(initial_labels)) - 1
   }
 
   # Convert the dataType to an integer as required by the C++ code.
